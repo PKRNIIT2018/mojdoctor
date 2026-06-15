@@ -86,3 +86,5 @@ Consultation/
 .husky/
 __pycache__/
 *.pyc
+.vercel
+supabase/
