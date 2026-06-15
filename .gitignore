@@ -1,0 +1,88 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
+*.crt
+*.keystore
+*.jks
+
+# Secrets in any directory
+**/secrets/
+**/credentials/
+**/service-account*.json
+
+# Build outputs
+.next/
+dist/
+build/
+out/
+.turbo/
+*.tsbuildinfo
+coverage/
+*.js.map
+packages/db/src/index.js
+packages/db/src/index.d.ts
+packages/db/src/types.js
+packages/db/src/types.d.ts
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# Runtime
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Testing
+playwright-report/
+test-results/
+
+# Supabase
+supabase/.temp/
+
+# Docs (not source code)
+docs/*.md
+docs/*.html
+google-workspace-tasks.md
+implementation_plan.md
+
+# Vercel
+.vercel/
+
+# Personal tool configs
+.agents/
+.antigravitycli/
+.mcp.json
+.opencode/
+.playwright-mcp/
+.serena/
+CLAUDE.md
+opencode.json
+opencode.jsonc
+skills-lock.json
+
+# Misc
+Consultation/
+.githooks/
+.husky/
+__pycache__/
+*.pyc

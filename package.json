@@ -1,0 +1,57 @@
+{
+  "name": "online-consultation",
+  "private": true,
+  "packageManager": "npm@11.16.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "db:migrate": "turbo db:migrate",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "prepare": "husky"
+  },
+  "overrides": {
+    "kysely": "^0.29.2",
+    "esbuild": ">=0.28.1",
+    "typescript": "^5.8.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@playwright/mcp": "^0.0.75",
+    "@types/pdfkit": "^0.17.6",
+    "@types/serviceworker": "^0.0.197",
+    "@types/uuid": "^10.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
+    "memory-mcp": "^2.0.0",
+    "prettier": "^3.4.0",
+    "shadcn": "^4.10.0",
+    "supabase-mcp": "^1.5.0",
+    "token-optimizer-mcp": "^2.17.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.0"
+  },
+  "dependencies": {
+    "@nestjs/throttler": "^6.5.0",
+    "@sentry/nextjs": "^10.57.0",
+    "@sentry/node": "^10.57.0",
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.107.0",
+    "googleapis": "^173.0.0",
+    "pdfkit": "^0.19.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs}": [
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
+  }
+}
