@@ -2,9 +2,11 @@ import "dotenv/config";
 import * as Sentry from "@sentry/node";
 import helmet from "helmet";
 import { NestFactory } from "@nestjs/core";
-import { ValidationPipe } from "@nestjs/common";
+import { ValidationPipe, Logger } from "@nestjs/common";
 import { AppModule } from "./app.module";
 import express from "express";
+
+const logger = new Logger("Bootstrap");
 
 async function bootstrap() {
   if (process.env.SENTRY_DSN) {
@@ -38,16 +40,16 @@ async function bootstrap() {
   );
 
   if (!process.env.STRIPE_WEBHOOK_SECRET) {
-    throw new Error("STRIPE_WEBHOOK_SECRET is required — set it before starting");
+    logger.warn("STRIPE_WEBHOOK_SECRET missing — webhook endpoints will fail");
   }
   if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error("STRIPE_SECRET_KEY is required — set it before starting");
+    logger.warn("STRIPE_SECRET_KEY missing — payment endpoints will fail");
   }
 
   app.use(express.json({ limit: "1mb" }));
 
-  const port = process.env.API_PORT ?? 4000;
+  const port = process.env.PORT ?? process.env.API_PORT ?? 4000;
   await app.listen(port);
-  console.log(`API running on http://localhost:${port}`);
+  logger.log(`API running on port ${port}`);
 }
 bootstrap();
