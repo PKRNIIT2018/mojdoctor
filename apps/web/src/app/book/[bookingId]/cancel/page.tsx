@@ -6,7 +6,8 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@web/components/ui/card";
 import { Button } from "@web/components/ui/button";
 import { api } from "@web/utils/api";
-import { useTranslation, detectLocale } from "@web/lib/i18n";
+import { useTranslation } from "@web/lib/i18n";
+import { useLocale } from "@web/hooks/use-locale";
 import { Loader2, AlertTriangle, XCircle, ArrowLeft, CheckCircle, Clock } from "lucide-react";
 
 type Booking = {
@@ -24,7 +25,7 @@ export default function CancelBookingPage() {
   const params = useParams();
   const router = useRouter();
   const bookingId = params.bookingId as string;
-  const [locale, setLocale] = useState<"en" | "sk">("en");
+  const locale = useLocale();
   const { t } = useTranslation(locale);
 
   const [loading, setLoading] = useState(true);
@@ -33,10 +34,6 @@ export default function CancelBookingPage() {
   const [error, setError] = useState<string | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [isLateCancel, setIsLateCancel] = useState(false);
-
-  useEffect(() => {
-    setLocale(detectLocale());
-  }, []);
 
   useEffect(() => {
     (async () => {

@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@web/components/ui/car
 import { Button } from "@web/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@web/components/ui/input-otp";
 import { api } from "@web/utils/api";
-import { useTranslation, detectLocale } from "@web/lib/i18n";
+import { useTranslation } from "@web/lib/i18n";
+import { useLocale } from "@web/hooks/use-locale";
 import { Loader2, FileText, Lock, AlertTriangle, Pill, ScrollText } from "lucide-react";
 
 interface DocumentData {
@@ -25,7 +26,7 @@ interface DocumentData {
 export default function PatientDocumentViewerPage() {
   const params = useParams();
   const bookingId = params.bookingId as string;
-  const [locale, setLocale] = useState<"en" | "sk">("en");
+  const locale = useLocale();
   const { t } = useTranslation(locale);
 
   const [pin, setPin] = useState("");
@@ -33,10 +34,6 @@ export default function PatientDocumentViewerPage() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<DocumentData | null>(null);
   const [attempts, setAttempts] = useState(5);
-
-  useEffect(() => {
-    setLocale(detectLocale());
-  }, []);
 
   const handleVerify = async () => {
     if (pin.length !== 4) return;

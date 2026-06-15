@@ -6,7 +6,8 @@ import Link from "next/link";
 import { Card, CardContent } from "@web/components/ui/card";
 import { Button } from "@web/components/ui/button";
 import { api } from "@web/utils/api";
-import { useTranslation, detectLocale } from "@web/lib/i18n";
+import { useTranslation } from "@web/lib/i18n";
+import { useLocale } from "@web/hooks/use-locale";
 import {
   Loader2,
   CheckCircle,
@@ -62,17 +63,13 @@ export default function BookingStatusPage() {
   const params = useParams();
   const bookingId = params.bookingId as string;
 
-  const [locale, setLocale] = useState<"en" | "sk">("en");
+  const locale = useLocale();
   const { t } = useTranslation(locale);
 
   const [status, setStatus] = useState<string | null>(null);
   const [booking, setBooking] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-
-  useEffect(() => {
-    setLocale(detectLocale());
-  }, []);
 
   const fetchStatus = async () => {
     try {

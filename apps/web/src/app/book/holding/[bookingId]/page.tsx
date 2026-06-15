@@ -6,7 +6,8 @@ import Link from "next/link";
 import { api } from "@web/utils/api";
 import { Button } from "@web/components/ui/button";
 import { Card, CardContent } from "@web/components/ui/card";
-import { useTranslation, detectLocale } from "@web/lib/i18n";
+import { useTranslation } from "@web/lib/i18n";
+import { useLocale } from "@web/hooks/use-locale";
 import {
   Loader2,
   Clock,
@@ -36,15 +37,11 @@ type BookingData = {
 export default function HoldingPage() {
   const params = useParams();
   const bookingId = params.bookingId as string;
-  const [locale, setLocale] = useState<"en" | "sk">("en");
+  const locale = useLocale();
   const { t } = useTranslation(locale);
 
   const [booking, setBooking] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLocale(detectLocale());
-  }, []);
 
   useEffect(() => {
     let mounted = true;
