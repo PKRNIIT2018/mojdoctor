@@ -8,14 +8,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
   } = await supabase.auth.getUser();
 
   let isAdmin = false;
-  if (user?.email) {
-    const admin = createAdminClient();
-    const { data: doctor } = await admin
-      .from("doctor")
-      .select("role")
-      .eq("email", user.email)
-      .single();
-    isAdmin = doctor?.role === "admin";
+  if (user?.email && process.env.SUPABASE_SECRET_KEY) {
+    try {
+      const admin = createAdminClient();
+      const { data: doctor } = await admin
+        .from("doctor")
+        .select("role")
+        .eq("email", user.email)
+        .single();
+      isAdmin = doctor?.role === "admin";
+    } catch {
+      // admin client unavailable — treat as non-admin
+    }
   }
 
   return (
