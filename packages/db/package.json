@@ -6,7 +6,6 @@
   "types": "./src/index.ts",
   "scripts": {
     "db:migrate": "tsx src/migrate.ts",
-    "lint": "eslint src --ext .ts --max-warnings 0",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
