@@ -4,7 +4,8 @@ import helmet from "helmet";
 import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
 import { ValidationPipe, Logger } from "@nestjs/common";
-import { AppModule } from "../src/app.module";
+import { AppModule } from "../dist/app.module";
+import { AllExceptionsFilter } from "../dist/utils/error-filter";
 import express from "express";
 import type { IncomingMessage, ServerResponse } from "http";
 
@@ -47,6 +48,8 @@ async function bootstrap() {
     })
   );
 
+  app.useGlobalFilters(new AllExceptionsFilter());
+
   if (!process.env.STRIPE_WEBHOOK_SECRET) {
     logger.warn("STRIPE_WEBHOOK_SECRET missing — webhook endpoints will fail");
   }
@@ -60,7 +63,15 @@ async function bootstrap() {
   initialized = true;
 }
 
+const handlerLogger = new Logger("Handler");
+
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
-  await bootstrap();
-  expressApp(req as any, res as any);
+  try {
+    await bootstrap();
+    expressApp(req as any, res as any);
+  } catch (err: any) {
+    handlerLogger.error(`FUNCTION_ERROR: ${err?.message ?? err}`, err?.stack);
+    res.statusCode = 500;
+    res.end(JSON.stringify({ error: "Internal Server Error", message: err?.message ?? "Unknown" }));
+  }
 }
