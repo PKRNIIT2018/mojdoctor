@@ -99,10 +99,8 @@ export class DoctorService {
       .executeTakeFirstOrThrow();
   }
 
-  async getProfile(email: string) {
-    const doctor = await this.findByEmail(email);
-    if (!doctor) throw new NotFoundException("Doctor not found");
-    return doctor;
+  async getProfile(id: string) {
+    return this.findOne(id);
   }
 
   async getPracticeSettings(id: string) {
