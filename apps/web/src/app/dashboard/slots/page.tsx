@@ -57,8 +57,8 @@ const emptyRuleForm: RuleForm = {
   daysOfWeek: [],
   startTime: "09:00",
   endTime: "17:00",
-  slotDuration: 30,
-  breakBetween: 5,
+  slotDuration: 45,
+  breakBetween: 15,
   mode: "video",
   dateFrom: "",
   dateTo: "",
@@ -453,6 +453,22 @@ export default function SlotsPage() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Start Time</label>
+                    <div className="flex gap-1 mb-1">
+                      {["09:00", "13:00", "14:00"].map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setRuleForm((f) => ({ ...f, startTime: t }))}
+                          className={`px-2 py-1 text-xs rounded border ${
+                            ruleForm.startTime === t
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-input hover:bg-accent"
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
                     <input
                       type="time"
                       value={ruleForm.startTime}
@@ -462,6 +478,22 @@ export default function SlotsPage() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">End Time</label>
+                    <div className="flex gap-1 mb-1">
+                      {["12:00", "17:00", "18:00"].map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setRuleForm((f) => ({ ...f, endTime: t }))}
+                          className={`px-2 py-1 text-xs rounded border ${
+                            ruleForm.endTime === t
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-input hover:bg-accent"
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
                     <input
                       type="time"
                       value={ruleForm.endTime}

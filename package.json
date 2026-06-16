@@ -17,6 +17,7 @@
     "prepare": "husky"
   },
   "overrides": {
+    "rxjs": "^7.8.2",
     "kysely": "^0.29.2",
     "esbuild": ">=0.28.1",
     "typescript": "^5.8.0",
