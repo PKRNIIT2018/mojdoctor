@@ -1,0 +1,13 @@
+meta {
+  name: GET Active Templates (Public)
+  method: GET
+  type: http
+  url: {{base_url}}/api/intake/templates/active/{{doctor_id}}
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

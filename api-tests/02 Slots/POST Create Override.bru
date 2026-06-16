@@ -1,0 +1,21 @@
+meta {
+  name: POST Create Override
+  method: POST
+  type: http
+  url: {{base_url}}/api/slots/overrides?doctorId={{doctor_id}}
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "date": "2026-06-25",
+    "isBlackout": false,
+    "startTime": "13:00",
+    "endTime": "17:00",
+    "mode": "in_person"
+  }
+}

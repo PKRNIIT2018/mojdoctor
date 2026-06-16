@@ -1,0 +1,13 @@
+meta {
+  name: GET Check Returning Patient
+  method: GET
+  type: http
+  url: {{base_url}}/api/bookings/check-patient?email={{patient_email}}
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

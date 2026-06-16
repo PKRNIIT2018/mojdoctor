@@ -1,0 +1,13 @@
+meta {
+  name: GET Payments by Booking
+  method: GET
+  type: http
+  url: {{base_url}}/api/payments/booking/{{booking_id}}
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

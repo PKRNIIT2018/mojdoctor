@@ -1,0 +1,13 @@
+meta {
+  name: GET Google Disconnect
+  method: GET
+  type: http
+  url: {{base_url}}/api/google/disconnect
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

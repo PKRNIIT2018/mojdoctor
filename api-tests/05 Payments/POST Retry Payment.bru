@@ -1,0 +1,17 @@
+meta {
+  name: POST Retry Payment
+  method: POST
+  type: http
+  url: {{base_url}}/api/payments/retry
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "bookingId": "{{booking_id}}"
+  }
+}

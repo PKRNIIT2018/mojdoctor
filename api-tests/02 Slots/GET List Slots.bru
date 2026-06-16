@@ -1,0 +1,13 @@
+meta {
+  name: GET List Slots
+  method: GET
+  type: http
+  url: {{base_url}}/api/slots?doctorId={{doctor_id}}&date=2026-06-20
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

@@ -1,0 +1,20 @@
+meta {
+  name: POST Create Case File
+  method: POST
+  type: http
+  url: {{base_url}}/api/case-files
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "bookingId": "{{booking_id}}",
+    "doctorId": "{{doctor_id}}",
+    "patientName": "{{patient_name}}",
+    "patientEmail": "{{patient_email}}"
+  }
+}

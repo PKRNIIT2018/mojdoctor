@@ -1,0 +1,13 @@
+meta {
+  name: DELETE Delete Prescription
+  method: DELETE
+  type: http
+  url: {{base_url}}/api/notes/prescriptions/{{prescription_id}}
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

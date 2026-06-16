@@ -1,0 +1,13 @@
+meta {
+  name: GET Search Bookings
+  method: GET
+  type: http
+  url: {{base_url}}/api/bookings/search/John
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

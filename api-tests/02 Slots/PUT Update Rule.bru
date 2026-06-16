@@ -1,0 +1,18 @@
+meta {
+  name: PUT Update Rule
+  method: PUT
+  type: http
+  url: {{base_url}}/api/slots/rules/{{rule_id}}
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "startTime": "10:00",
+    "endTime": "16:00"
+  }
+}

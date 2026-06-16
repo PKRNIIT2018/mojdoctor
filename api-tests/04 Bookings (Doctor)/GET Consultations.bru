@@ -1,0 +1,13 @@
+meta {
+  name: GET Consultations
+  method: GET
+  type: http
+  url: {{base_url}}/api/bookings/doctor/{{doctor_id}}/consultations?status=CONFIRMED
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

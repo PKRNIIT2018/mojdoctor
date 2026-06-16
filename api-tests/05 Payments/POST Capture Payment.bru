@@ -1,0 +1,13 @@
+meta {
+  name: POST Capture Payment
+  method: POST
+  type: http
+  url: {{base_url}}/api/payments/{{payment_id}}/capture
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

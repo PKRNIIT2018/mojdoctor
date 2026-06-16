@@ -1,0 +1,13 @@
+meta {
+  name: GET Practice Settings
+  method: GET
+  type: http
+  url: {{base_url}}/api/doctors/me/practice-settings
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

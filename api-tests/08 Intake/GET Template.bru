@@ -1,0 +1,13 @@
+meta {
+  name: GET Template
+  method: GET
+  type: http
+  url: {{base_url}}/api/intake/templates/{{intake_template_id}}
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

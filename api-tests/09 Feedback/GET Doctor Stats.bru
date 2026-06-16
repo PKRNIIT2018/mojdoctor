@@ -1,0 +1,13 @@
+meta {
+  name: GET Doctor Stats
+  method: GET
+  type: http
+  url: {{base_url}}/api/feedback/doctor/{{doctor_id}}/stats
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

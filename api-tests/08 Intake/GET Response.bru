@@ -1,0 +1,13 @@
+meta {
+  name: GET Response
+  method: GET
+  type: http
+  url: {{base_url}}/api/intake/responses/{{intake_response_id}}
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

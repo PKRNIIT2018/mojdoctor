@@ -1,0 +1,24 @@
+meta {
+  name: POST Create Template
+  method: POST
+  type: http
+  url: {{base_url}}/api/intake/templates
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "New Patient Intake",
+    "description": "Standard intake form for new patients",
+    "questions": [
+      { "label": "Full Name", "type": "text", "required": true },
+      { "label": "Date of Birth", "type": "date", "required": true },
+      { "label": "Allergies", "type": "text", "required": false }
+    ],
+    "isActive": true
+  }
+}

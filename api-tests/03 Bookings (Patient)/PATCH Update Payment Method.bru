@@ -1,0 +1,17 @@
+meta {
+  name: PATCH Update Payment Method
+  method: PATCH
+  type: http
+  url: {{base_url}}/api/bookings/{{booking_id}}/payment-method
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "paymentMethod": "card"
+  }
+}

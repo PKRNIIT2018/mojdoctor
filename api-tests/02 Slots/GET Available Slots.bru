@@ -1,0 +1,13 @@
+meta {
+  name: GET Available Slots
+  method: GET
+  type: http
+  url: {{base_url}}/api/slots/available/{{doctor_id}}?from=2026-06-16&to=2026-06-30&mode=video
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

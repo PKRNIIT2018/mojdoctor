@@ -1,0 +1,18 @@
+meta {
+  name: POST Reschedule
+  method: POST
+  type: http
+  url: {{base_url}}/api/bookings/{{booking_id}}/reschedule
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "selectedSlotId": "{{slot_id}}",
+    "patientEmail": "{{patient_email}}"
+  }
+}

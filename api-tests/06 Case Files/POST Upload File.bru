@@ -1,0 +1,16 @@
+meta {
+  name: POST Upload File
+  method: POST
+  type: http
+  url: {{base_url}}/api/case-files/{{case_file_id}}/upload
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: multipart/form-data
+}
+
+body:multipart/form-data {
+  file: @file(/path/to/your/document.pdf)
+  category: lab_results
+}

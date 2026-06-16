@@ -1,0 +1,13 @@
+meta {
+  name: GET Notes by Case File
+  method: GET
+  type: http
+  url: {{base_url}}/api/notes/case-file/{{case_file_id}}
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

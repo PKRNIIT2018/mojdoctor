@@ -1,0 +1,13 @@
+meta {
+  name: POST Generate Slots
+  method: POST
+  type: http
+  url: {{base_url}}/api/slots/generate/{{doctor_id}}
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

@@ -1,0 +1,13 @@
+meta {
+  name: GET Slot by ID
+  method: GET
+  type: http
+  url: {{base_url}}/api/slots/{{slot_id}}
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

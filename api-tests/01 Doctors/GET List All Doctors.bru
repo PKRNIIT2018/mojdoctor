@@ -1,0 +1,13 @@
+meta {
+  name: GET List All Doctors
+  method: GET
+  type: http
+  url: {{base_url}}/api/doctors
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

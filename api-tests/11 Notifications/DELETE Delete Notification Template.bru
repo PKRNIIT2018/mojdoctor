@@ -1,0 +1,13 @@
+meta {
+  name: DELETE Delete Notification Template
+  method: DELETE
+  type: http
+  url: {{base_url}}/api/notifications/templates/{{notification_template_id}}
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

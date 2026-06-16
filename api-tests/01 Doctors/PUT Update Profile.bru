@@ -1,0 +1,23 @@
+meta {
+  name: PUT Update Profile
+  method: PUT
+  type: http
+  url: {{base_url}}/api/doctors/me
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Dr. John Smith",
+    "specialty": "Cardiology",
+    "licenceNumber": "SK12345",
+    "clinicName": "Heart Clinic",
+    "clinicAddress": "Main Street 123, Bratislava",
+    "practicePhone": "+421901234567",
+    "language": "sk"
+  }
+}

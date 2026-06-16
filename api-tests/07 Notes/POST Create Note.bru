@@ -1,0 +1,25 @@
+meta {
+  name: POST Create Note
+  method: POST
+  type: http
+  url: {{base_url}}/api/notes
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "caseFileId": "{{case_file_id}}",
+    "contentMarkdown": "# Consultation Notes\n\nPatient reported no issues.",
+    "sections": [
+      { "heading": "Subjective", "content": "Patient feels well." },
+      { "heading": "Objective", "content": "BP 120/80, HR 72" },
+      { "heading": "Assessment", "content": "Healthy" },
+      { "heading": "Plan", "content": "Follow up in 6 months" }
+    ],
+    "summary": "Routine checkup, no abnormalities."
+  }
+}

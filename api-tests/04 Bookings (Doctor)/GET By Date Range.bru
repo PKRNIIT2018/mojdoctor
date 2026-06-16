@@ -1,0 +1,13 @@
+meta {
+  name: GET By Date Range
+  method: GET
+  type: http
+  url: {{base_url}}/api/bookings/range/{{doctor_id}}?from=2026-06-01&to=2026-07-01
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

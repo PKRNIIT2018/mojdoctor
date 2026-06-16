@@ -1,0 +1,13 @@
+meta {
+  name: GET List Bookings
+  method: GET
+  type: http
+  url: {{base_url}}/api/bookings?doctorId={{doctor_id}}&status=PENDING_REVIEW
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

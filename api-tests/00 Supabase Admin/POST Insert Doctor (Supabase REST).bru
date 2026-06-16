@@ -1,0 +1,25 @@
+meta {
+  name: POST Insert Doctor (Supabase REST)
+  method: POST
+  type: http
+  url: {{supabase_url}}/rest/v1/doctor?on_conflict=email
+}
+
+headers {
+  apikey: {{supabase_anon_key}}
+  Authorization: Bearer {{supabase_service_key}}
+  Content-Type: application/json
+  Prefer: return=representation
+  Prefer: resolution=merge-duplicates
+}
+
+body:json {
+  {
+    "email": "robin@onlineconsult.com",
+    "name": "Robin",
+    "specialty": "Ayurvedic Physician and Specialist",
+    "clinic_name": "robinraju.sk",
+    "practice_phone": "+421 919 046 856",
+    "language": "sk"
+  }
+}

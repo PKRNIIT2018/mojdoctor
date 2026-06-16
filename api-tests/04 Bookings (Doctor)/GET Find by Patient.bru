@@ -1,0 +1,13 @@
+meta {
+  name: GET Find by Patient
+  method: GET
+  type: http
+  url: {{base_url}}/api/bookings/patient/{{patient_email}}
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

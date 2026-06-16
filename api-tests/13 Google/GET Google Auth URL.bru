@@ -1,0 +1,13 @@
+meta {
+  name: GET Google Auth URL
+  method: GET
+  type: http
+  url: {{base_url}}/api/google/auth
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

@@ -1,0 +1,13 @@
+meta {
+  name: POST Void Payment
+  method: POST
+  type: http
+  url: {{base_url}}/api/payments/{{payment_id}}/void
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:none {}

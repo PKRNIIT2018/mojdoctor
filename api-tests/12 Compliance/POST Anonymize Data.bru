@@ -1,0 +1,17 @@
+meta {
+  name: POST Anonymize Data
+  method: POST
+  type: http
+  url: {{base_url}}/api/compliance/anonymize
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "olderThanDays": 365
+  }
+}

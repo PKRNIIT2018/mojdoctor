@@ -1,0 +1,19 @@
+meta {
+  name: PUT Integration Settings
+  method: PUT
+  type: http
+  url: {{base_url}}/api/doctors/me/integrations
+}
+
+headers {
+  Authorization: Bearer {{auth_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "transcriptionProvider": "default",
+    "videoProvider": "whereby",
+    "storageProvider": "r2"
+  }
+}
