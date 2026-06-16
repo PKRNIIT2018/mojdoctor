@@ -7,33 +7,32 @@ import {
   Body,
   Param,
   UseGuards,
+  UseInterceptors,
   Inject,
   ParseUUIDPipe,
 } from "@nestjs/common";
 import { AuthGuard } from "../auth/auth.guard";
-import { CurrentUser } from "../auth/auth.decorator";
+import { CurrentDoctor } from "../auth/doctor.decorator";
+import { ResolveDoctorInterceptor } from "../auth/resolve-doctor.interceptor";
 import { NotificationsService } from "./notifications.service";
-import { DoctorService } from "../doctor/doctor.service";
 import {
   CreateTemplateDto,
   UpdateTemplateDto,
   SendNotificationDto,
   SendPatientNotificationDto,
 } from "./dto/notifications.dto";
-import type { User } from "@supabase/supabase-js";
 
 @Controller("api/notifications")
 @UseGuards(AuthGuard)
+@UseInterceptors(ResolveDoctorInterceptor)
 export class NotificationsController {
   constructor(
-    @Inject(NotificationsService) private readonly notificationsService: NotificationsService,
-    @Inject(DoctorService) private readonly doctorService: DoctorService
+    @Inject(NotificationsService) private readonly notificationsService: NotificationsService
   ) {}
 
   @Get("templates")
-  async getTemplates(@CurrentUser() user: User) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.notificationsService.getTemplates(doctor!.id);
+  async getTemplates(@CurrentDoctor() doctor: { id: string }) {
+    return this.notificationsService.getTemplates(doctor.id);
   }
 
   @Get("templates/:id")
@@ -42,9 +41,8 @@ export class NotificationsController {
   }
 
   @Post("templates")
-  async createTemplate(@CurrentUser() user: User, @Body() body: CreateTemplateDto) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.notificationsService.createTemplate({ doctorId: doctor!.id, ...body });
+  async createTemplate(@CurrentDoctor() doctor: { id: string }, @Body() body: CreateTemplateDto) {
+    return this.notificationsService.createTemplate({ doctorId: doctor.id, ...body });
   }
 
   @Put("templates/:id")
@@ -58,9 +56,8 @@ export class NotificationsController {
   }
 
   @Post("send")
-  async send(@CurrentUser() user: User, @Body() body: SendNotificationDto) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.notificationsService.send({ doctorId: doctor!.id, ...body });
+  async send(@CurrentDoctor() doctor: { id: string }, @Body() body: SendNotificationDto) {
+    return this.notificationsService.send({ doctorId: doctor.id, ...body });
   }
 
   @Post("send-confirmation/:bookingId")

@@ -1,29 +1,34 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Inject } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  UseInterceptors,
+  Inject,
+} from "@nestjs/common";
 import { AuthGuard } from "../auth/auth.guard";
-import { CurrentUser } from "../auth/auth.decorator";
+import { CurrentDoctor } from "../auth/doctor.decorator";
+import { ResolveDoctorInterceptor } from "../auth/resolve-doctor.interceptor";
 import { ComplianceService } from "./compliance.service";
-import { DoctorService } from "../doctor/doctor.service";
 import { AnonymizeDto, ExportDataDto, ErasureDto } from "./dto/compliance.dto";
-import type { User } from "@supabase/supabase-js";
 
 @Controller("api/compliance")
 @UseGuards(AuthGuard)
+@UseInterceptors(ResolveDoctorInterceptor)
 export class ComplianceController {
-  constructor(
-    @Inject(ComplianceService) private readonly complianceService: ComplianceService,
-    @Inject(DoctorService) private readonly doctorService: DoctorService
-  ) {}
+  constructor(@Inject(ComplianceService) private readonly complianceService: ComplianceService) {}
 
   @Get("stats")
-  async getStats(@CurrentUser() user: User) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.complianceService.getStats(doctor!.id);
+  async getStats(@CurrentDoctor() doctor: { id: string }) {
+    return this.complianceService.getStats(doctor.id);
   }
 
   @Post("anonymize")
-  async anonymize(@CurrentUser() user: User, @Body() body: AnonymizeDto) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.complianceService.anonymizePatientData(doctor!.id, body.olderThanDays ?? 365);
+  async anonymize(@CurrentDoctor() doctor: { id: string }, @Body() body: AnonymizeDto) {
+    return this.complianceService.anonymizePatientData(doctor.id, body.olderThanDays ?? 365);
   }
 
   @Post("export")

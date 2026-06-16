@@ -43,7 +43,7 @@ type SlotOverride = {
 };
 
 type RuleForm = {
-  dayOfWeek: number;
+  daysOfWeek: number[];
   startTime: string;
   endTime: string;
   slotDuration: number;
@@ -54,7 +54,7 @@ type RuleForm = {
 };
 
 const emptyRuleForm: RuleForm = {
-  dayOfWeek: 0,
+  daysOfWeek: [],
   startTime: "09:00",
   endTime: "17:00",
   slotDuration: 30,
@@ -175,7 +175,7 @@ export default function SlotsPage() {
     setEditingRule(rule);
     const range = rule.date_range;
     setRuleForm({
-      dayOfWeek: rule.day_of_week,
+      daysOfWeek: [rule.day_of_week],
       startTime: rule.start_time,
       endTime: rule.end_time,
       slotDuration: rule.slot_duration,
@@ -194,8 +194,9 @@ export default function SlotsPage() {
   };
 
   const submitRule = () => {
-    const payload: Record<string, unknown> = {
-      dayOfWeek: ruleForm.dayOfWeek,
+    if (ruleForm.daysOfWeek.length === 0) return;
+
+    const basePayload: Record<string, unknown> = {
       startTime: ruleForm.startTime,
       endTime: ruleForm.endTime,
       slotDuration: ruleForm.slotDuration,
@@ -203,14 +204,21 @@ export default function SlotsPage() {
       mode: ruleForm.mode,
     };
     if (ruleForm.dateFrom && ruleForm.dateTo) {
-      payload.dateRange = { from: ruleForm.dateFrom, to: ruleForm.dateTo };
+      basePayload.dateRange = { from: ruleForm.dateFrom, to: ruleForm.dateTo };
     }
 
     if (editingRule) {
+      const payload = { ...basePayload, dayOfWeek: ruleForm.daysOfWeek[0] };
       updateRuleMutation.mutate({ ruleId: editingRule.id, payload });
+      for (let i = 1; i < ruleForm.daysOfWeek.length; i++) {
+        createRuleMutation.mutate({ ...basePayload, dayOfWeek: ruleForm.daysOfWeek[i] });
+      }
     } else {
-      createRuleMutation.mutate(payload);
+      for (const day of ruleForm.daysOfWeek) {
+        createRuleMutation.mutate({ ...basePayload, dayOfWeek: day });
+      }
     }
+    closeRuleForm();
   };
 
   const deleteRule = (ruleId: string) => {
@@ -403,20 +411,33 @@ export default function SlotsPage() {
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Day of Week</label>
-                    <select
-                      value={ruleForm.dayOfWeek}
-                      onChange={(e) =>
-                        setRuleForm((f) => ({ ...f, dayOfWeek: Number(e.target.value) }))
-                      }
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      {DAY_NAMES.map((name, i) => (
-                        <option key={i} value={i}>
-                          {name}
-                        </option>
-                      ))}
-                    </select>
+                    <label className="text-sm font-medium text-foreground">Days of Week</label>
+                    <div className="grid grid-cols-7 gap-1">
+                      {DAY_NAMES.map((name, i) => {
+                        const active = ruleForm.daysOfWeek.includes(i);
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() =>
+                              setRuleForm((f) => ({
+                                ...f,
+                                daysOfWeek: active
+                                  ? f.daysOfWeek.filter((d) => d !== i)
+                                  : [...f.daysOfWeek, i].sort(),
+                              }))
+                            }
+                            className={`h-10 rounded-md text-xs font-medium border transition-colors ${
+                              active
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background text-muted-foreground border-input hover:bg-accent hover:text-accent-foreground"
+                            }`}
+                          >
+                            {name.slice(0, 3)}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Consultation Mode</label>

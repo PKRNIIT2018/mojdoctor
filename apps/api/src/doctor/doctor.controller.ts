@@ -5,14 +5,17 @@ import {
   Put,
   Body,
   Param,
+  Query,
   ParseUUIDPipe,
   UseGuards,
+  UseInterceptors,
   Inject,
 } from "@nestjs/common";
 import { AuthGuard } from "../auth/auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
-import { CurrentUser } from "../auth/auth.decorator";
+import { CurrentDoctor } from "../auth/doctor.decorator";
+import { ResolveDoctorInterceptor } from "../auth/resolve-doctor.interceptor";
 import { DoctorService } from "./doctor.service";
 import { StripeConnectService } from "../payment/stripe-connect.service";
 import {
@@ -23,7 +26,6 @@ import {
   UpdateNotificationPrefsDto,
   AcceptDpaDto,
 } from "./dto/doctor.dto";
-import type { User } from "@supabase/supabase-js";
 
 @Controller("api/doctors")
 export class DoctorController {
@@ -44,97 +46,101 @@ export class DoctorController {
 
   @Get()
   @UseGuards(AuthGuard)
-  async findAll() {
-    return this.doctorService.findAll();
+  async findAll(@Query("page") page?: string, @Query("limit") limit?: string) {
+    return this.doctorService.findAll(Number(page) || 1, Number(limit) || 50);
   }
 
   @Get("me")
   @UseGuards(AuthGuard)
-  async getProfile(@CurrentUser() user: User) {
-    return this.doctorService.getProfile(user.email!);
+  @UseInterceptors(ResolveDoctorInterceptor)
+  async getProfile(@CurrentDoctor() doctor: { id: string }) {
+    return this.doctorService.getProfile(doctor.id);
   }
 
   @Put("me")
   @UseGuards(AuthGuard)
-  async updateProfile(@CurrentUser() user: User, @Body() body: UpdateProfileDto) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.doctorService.updateProfile(doctor!.id, body);
+  @UseInterceptors(ResolveDoctorInterceptor)
+  async updateProfile(@CurrentDoctor() doctor: { id: string }, @Body() body: UpdateProfileDto) {
+    return this.doctorService.updateProfile(doctor.id, body);
   }
 
   @Get("me/practice-settings")
   @UseGuards(AuthGuard)
-  async getPracticeSettings(@CurrentUser() user: User) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.doctorService.getPracticeSettings(doctor!.id);
+  @UseInterceptors(ResolveDoctorInterceptor)
+  async getPracticeSettings(@CurrentDoctor() doctor: { id: string }) {
+    return this.doctorService.getPracticeSettings(doctor.id);
   }
 
   @Put("me/practice-settings")
   @UseGuards(AuthGuard)
-  async updatePracticeSettings(@CurrentUser() user: User, @Body() body: UpdatePracticeSettingsDto) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.doctorService.updatePracticeSettings(doctor!.id, body);
+  @UseInterceptors(ResolveDoctorInterceptor)
+  async updatePracticeSettings(
+    @CurrentDoctor() doctor: { id: string },
+    @Body() body: UpdatePracticeSettingsDto
+  ) {
+    return this.doctorService.updatePracticeSettings(doctor.id, body);
   }
 
   @Get("me/integrations")
   @UseGuards(AuthGuard)
-  async getIntegrationSettings(@CurrentUser() user: User) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.doctorService.getIntegrationSettings(doctor!.id);
+  @UseInterceptors(ResolveDoctorInterceptor)
+  async getIntegrationSettings(@CurrentDoctor() doctor: { id: string }) {
+    return this.doctorService.getIntegrationSettings(doctor.id);
   }
 
   @Put("me/integrations")
   @UseGuards(AuthGuard)
+  @UseInterceptors(ResolveDoctorInterceptor)
   async updateIntegrationSettings(
-    @CurrentUser() user: User,
+    @CurrentDoctor() doctor: { id: string },
     @Body() body: UpdateIntegrationSettingsDto
   ) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.doctorService.updateIntegrationSettings(doctor!.id, body);
+    return this.doctorService.updateIntegrationSettings(doctor.id, body);
   }
 
   @Get("me/notifications")
   @UseGuards(AuthGuard)
-  async getNotificationPrefs(@CurrentUser() user: User) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.doctorService.getNotificationPrefs(doctor!.id);
+  @UseInterceptors(ResolveDoctorInterceptor)
+  async getNotificationPrefs(@CurrentDoctor() doctor: { id: string }) {
+    return this.doctorService.getNotificationPrefs(doctor.id);
   }
 
   @Put("me/notifications")
   @UseGuards(AuthGuard)
+  @UseInterceptors(ResolveDoctorInterceptor)
   async updateNotificationPrefs(
-    @CurrentUser() user: User,
+    @CurrentDoctor() doctor: { id: string },
     @Body() body: UpdateNotificationPrefsDto
   ) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.doctorService.updateNotificationPrefs(doctor!.id, body);
+    return this.doctorService.updateNotificationPrefs(doctor.id, body);
   }
 
   @Post("me/dpa")
   @UseGuards(AuthGuard)
-  async acceptDpa(@CurrentUser() user: User, @Body() body: AcceptDpaDto) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.doctorService.acceptDpa(doctor!.id, body.version);
+  @UseInterceptors(ResolveDoctorInterceptor)
+  async acceptDpa(@CurrentDoctor() doctor: { id: string }, @Body() body: AcceptDpaDto) {
+    return this.doctorService.acceptDpa(doctor.id, body.version);
   }
 
   @Post("me/stripe-connect")
   @UseGuards(AuthGuard)
-  async createStripeConnect(@CurrentUser() user: User) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.stripeConnectService.createAccount(doctor!.id);
+  @UseInterceptors(ResolveDoctorInterceptor)
+  async createStripeConnect(@CurrentDoctor() doctor: { id: string }) {
+    return this.stripeConnectService.createAccount(doctor.id);
   }
 
   @Post("me/stripe-connect/link")
   @UseGuards(AuthGuard)
-  async createStripeConnectLink(@CurrentUser() user: User) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.stripeConnectService.createAccountLink(doctor!.id);
+  @UseInterceptors(ResolveDoctorInterceptor)
+  async createStripeConnectLink(@CurrentDoctor() doctor: { id: string }) {
+    return this.stripeConnectService.createAccountLink(doctor.id);
   }
 
   @Get("me/stripe-connect/status")
   @UseGuards(AuthGuard)
-  async getStripeConnectStatus(@CurrentUser() user: User) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.stripeConnectService.getStatus(doctor!.id);
+  @UseInterceptors(ResolveDoctorInterceptor)
+  async getStripeConnectStatus(@CurrentDoctor() doctor: { id: string }) {
+    return this.stripeConnectService.getStatus(doctor.id);
   }
 
   @Post()

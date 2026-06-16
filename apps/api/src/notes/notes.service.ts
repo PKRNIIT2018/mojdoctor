@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject, ForbiddenException } from "@nestjs/common";
+import { Injectable, NotFoundException, Inject, ForbiddenException, Logger } from "@nestjs/common";
 import { DatabaseService } from "../database/database.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { generatePrescriptionPdf, encryptPdfWithPin } from "@repo/prescription";
@@ -6,6 +6,8 @@ import { assertCaseFileOwnership, assertNoteOwnership } from "../common/guards/o
 
 @Injectable()
 export class NotesService {
+  private readonly logger = new Logger(NotesService.name);
+
   constructor(
     @Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(NotificationsService) private readonly notifications: NotificationsService
@@ -113,7 +115,9 @@ export class NotesService {
       .returningAll()
       .executeTakeFirstOrThrow();
 
-    this.sendPrescriptionEmail(data.doctorNoteId, prescription).catch(() => {});
+    this.sendPrescriptionEmail(data.doctorNoteId, prescription).catch((err: unknown) =>
+      this.logger.error(`sendPrescriptionEmail: ${err instanceof Error ? err.message : err}`)
+    );
 
     return prescription;
   }
@@ -161,7 +165,9 @@ export class NotesService {
           content: pdfBuffer.toString("base64"),
         }
       )
-      .catch(() => {});
+      .catch((err: unknown) =>
+        this.logger.error(`sendPrescriptionDelivery: ${err instanceof Error ? err.message : err}`)
+      );
   }
 
   async removePrescription(prescriptionId: string, doctorId: string) {

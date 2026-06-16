@@ -133,38 +133,72 @@ export class BookingController {
 
   @Get("patient/:email")
   @UseGuards(AuthGuard)
-  async findByPatient(@Param("email") email: string) {
-    return this.bookingService.findByPatient(email);
+  async findByPatient(
+    @Param("email") email: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string
+  ) {
+    return this.bookingService.findByPatient(email, Number(page) || 1, Number(limit) || 20);
   }
 
   @Get("patient/:email/history")
   @UseGuards(AuthGuard)
-  async getPatientHistory(@Param("email") email: string, @Query("doctorId") doctorId: string) {
-    return this.bookingService.getPatientHistory(email, doctorId);
+  async getPatientHistory(
+    @Param("email") email: string,
+    @Query("doctorId") doctorId: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string
+  ) {
+    return this.bookingService.getPatientHistory(
+      email,
+      doctorId,
+      Number(page) || 1,
+      Number(limit) || 20
+    );
   }
 
   @Get("doctor/:doctorId/consultations")
   @UseGuards(AuthGuard)
   async getConsultations(
     @Param("doctorId", ParseUUIDPipe) doctorId: string,
-    @Query("status") status?: string
+    @Query("status") status?: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string
   ) {
-    return this.bookingService.getConsultations(doctorId, status);
+    return this.bookingService.getConsultations(
+      doctorId,
+      status,
+      Number(page) || 1,
+      Number(limit) || 20
+    );
   }
 
   @Get()
   @UseGuards(AuthGuard)
-  async findAll(@Query("doctorId") doctorId?: string, @Query("status") status?: string) {
+  async findAll(
+    @Query("doctorId") doctorId?: string,
+    @Query("status") status?: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string
+  ) {
+    const p = Number(page) || 1;
+    const l = Number(limit) || 20;
     if (doctorId) {
-      return this.bookingService.findByDoctor(doctorId);
+      return this.bookingService.findByDoctor(doctorId, p, l);
     }
     if (status === "PENDING_REVIEW") {
-      return this.bookingService.findPendingReview();
+      return this.bookingService.findPendingReview(p, l);
     }
     if (status) {
-      return this.bookingService.findByStatus(status);
+      return this.bookingService.findByStatus(status, p, l);
     }
-    return this.db.db.selectFrom("booking").selectAll().orderBy("created_at", "desc").execute();
+    return this.db.db
+      .selectFrom("booking")
+      .selectAll()
+      .orderBy("created_at", "desc")
+      .limit(l)
+      .offset((p - 1) * l)
+      .execute();
   }
 
   @Get(":id")

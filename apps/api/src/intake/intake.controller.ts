@@ -7,27 +7,24 @@ import {
   Body,
   Param,
   UseGuards,
+  UseInterceptors,
   Inject,
   ParseUUIDPipe,
 } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { AuthGuard } from "../auth/auth.guard";
-import { CurrentUser } from "../auth/auth.decorator";
+import { CurrentDoctor } from "../auth/doctor.decorator";
+import { ResolveDoctorInterceptor } from "../auth/resolve-doctor.interceptor";
 import { IntakeService } from "./intake.service";
-import { DoctorService } from "../doctor/doctor.service";
 import {
   CreateIntakeTemplateDto,
   UpdateIntakeTemplateDto,
   SubmitIntakeResponseDto,
 } from "./dto/intake.dto";
-import type { User } from "@supabase/supabase-js";
 
 @Controller("api/intake")
 export class IntakeController {
-  constructor(
-    @Inject(IntakeService) private readonly intakeService: IntakeService,
-    @Inject(DoctorService) private readonly doctorService: DoctorService
-  ) {}
+  constructor(@Inject(IntakeService) private readonly intakeService: IntakeService) {}
 
   @Get("templates/active/:doctorId")
   async getActiveTemplates(@Param("doctorId", ParseUUIDPipe) doctorId: string) {
@@ -36,41 +33,50 @@ export class IntakeController {
 
   @Get("templates")
   @UseGuards(AuthGuard)
-  async getTemplates(@CurrentUser() user: User) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.intakeService.getTemplates(doctor!.id);
+  @UseInterceptors(ResolveDoctorInterceptor)
+  async getTemplates(@CurrentDoctor() doctor: { id: string }) {
+    return this.intakeService.getTemplates(doctor.id);
   }
 
   @Get("templates/:id")
   @UseGuards(AuthGuard)
-  async getTemplate(@CurrentUser() user: User, @Param("id", ParseUUIDPipe) id: string) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.intakeService.getTemplate(id, doctor!.id);
+  @UseInterceptors(ResolveDoctorInterceptor)
+  async getTemplate(
+    @CurrentDoctor() doctor: { id: string },
+    @Param("id", ParseUUIDPipe) id: string
+  ) {
+    return this.intakeService.getTemplate(id, doctor.id);
   }
 
   @Post("templates")
   @UseGuards(AuthGuard)
-  async createTemplate(@CurrentUser() user: User, @Body() body: CreateIntakeTemplateDto) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.intakeService.createTemplate({ doctorId: doctor!.id, ...body });
+  @UseInterceptors(ResolveDoctorInterceptor)
+  async createTemplate(
+    @CurrentDoctor() doctor: { id: string },
+    @Body() body: CreateIntakeTemplateDto
+  ) {
+    return this.intakeService.createTemplate({ doctorId: doctor.id, ...body });
   }
 
   @Put("templates/:id")
   @UseGuards(AuthGuard)
+  @UseInterceptors(ResolveDoctorInterceptor)
   async updateTemplate(
-    @CurrentUser() user: User,
+    @CurrentDoctor() doctor: { id: string },
     @Param("id", ParseUUIDPipe) id: string,
     @Body() body: UpdateIntakeTemplateDto
   ) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.intakeService.updateTemplate(id, doctor!.id, body);
+    return this.intakeService.updateTemplate(id, doctor.id, body);
   }
 
   @Delete("templates/:id")
   @UseGuards(AuthGuard)
-  async deleteTemplate(@CurrentUser() user: User, @Param("id", ParseUUIDPipe) id: string) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.intakeService.deleteTemplate(id, doctor!.id);
+  @UseInterceptors(ResolveDoctorInterceptor)
+  async deleteTemplate(
+    @CurrentDoctor() doctor: { id: string },
+    @Param("id", ParseUUIDPipe) id: string
+  ) {
+    return this.intakeService.deleteTemplate(id, doctor.id);
   }
 
   @Post("responses")
@@ -81,18 +87,21 @@ export class IntakeController {
 
   @Get("responses/booking/:bookingId")
   @UseGuards(AuthGuard)
+  @UseInterceptors(ResolveDoctorInterceptor)
   async getResponses(
-    @CurrentUser() user: User,
+    @CurrentDoctor() doctor: { id: string },
     @Param("bookingId", ParseUUIDPipe) bookingId: string
   ) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.intakeService.getResponses(bookingId, doctor!.id);
+    return this.intakeService.getResponses(bookingId, doctor.id);
   }
 
   @Get("responses/:id")
   @UseGuards(AuthGuard)
-  async getResponse(@CurrentUser() user: User, @Param("id", ParseUUIDPipe) id: string) {
-    const doctor = await this.doctorService.findByEmail(user.email!);
-    return this.intakeService.getResponse(id, doctor!.id);
+  @UseInterceptors(ResolveDoctorInterceptor)
+  async getResponse(
+    @CurrentDoctor() doctor: { id: string },
+    @Param("id", ParseUUIDPipe) id: string
+  ) {
+    return this.intakeService.getResponse(id, doctor.id);
   }
 }

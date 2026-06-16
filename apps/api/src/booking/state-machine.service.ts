@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Inject } from "@nestjs/common";
+import { Injectable, BadRequestException, Inject, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { DatabaseService } from "../database/database.service";
 import { GoogleCalendarService } from "../google/google-calendar.service";
@@ -27,6 +27,7 @@ interface Transition {
 
 @Injectable()
 export class StateMachineService {
+  private readonly logger = new Logger(StateMachineService.name);
   private transitions: Transition[] = [
     { from: ["PENDING_REVIEW"], to: "AWAITING_CARD", label: "Approve (card)" },
     { from: ["PENDING_REVIEW"], to: "CONFIRMED", label: "Approve (as agreed)" },
@@ -128,50 +129,67 @@ export class StateMachineService {
 
     const now = new Date();
 
-    await this.database.db
-      .updateTable("booking")
-      .set({
-        status: newState,
-        current_state_entered_at: now,
-        updated_at: now,
-      })
-      .where("id", "=", bookingId)
-      .execute();
-
-    // If transitioning away from CONFIRMED or AWAITING_CARD, reopen the slot
-    if (
-      (currentState === "CONFIRMED" || currentState === "AWAITING_CARD") &&
-      ["CANCELLED_BY_PATIENT", "CANCELLED_BY_DOCTOR", "REJECTED", "EXPIRED"].includes(newState)
-    ) {
-      await this.database.db
-        .updateTable("slot")
-        .set({ status: "open", updated_at: now })
-        .where("id", "=", booking.slot_id)
+    await this.database.db.transaction().execute(async (trx) => {
+      await trx
+        .updateTable("booking")
+        .set({
+          status: newState,
+          current_state_entered_at: now,
+          updated_at: now,
+        })
+        .where("id", "=", bookingId)
         .execute();
-    }
 
-    // If approved, mark slot as booked
-    if (newState === "AWAITING_CARD" || newState === "CONFIRMED") {
-      await this.database.db
-        .updateTable("slot")
-        .set({ status: "booked", updated_at: now })
-        .where("id", "=", booking.slot_id)
+      // If transitioning away from CONFIRMED or AWAITING_CARD, reopen the slot
+      if (
+        (currentState === "CONFIRMED" || currentState === "AWAITING_CARD") &&
+        ["CANCELLED_BY_PATIENT", "CANCELLED_BY_DOCTOR", "REJECTED", "EXPIRED"].includes(newState)
+      ) {
+        await trx
+          .updateTable("slot")
+          .set({ status: "open", updated_at: now })
+          .where("id", "=", booking.slot_id)
+          .execute();
+      }
+
+      // If approved, mark slot as booked
+      if (newState === "AWAITING_CARD" || newState === "CONFIRMED") {
+        await trx
+          .updateTable("slot")
+          .set({ status: "booked", updated_at: now })
+          .where("id", "=", booking.slot_id)
+          .execute();
+      }
+
+      // If postponed, reopen slot
+      if (newState === "AWAITING_PATIENT_RESCHEDULE") {
+        await trx
+          .updateTable("slot")
+          .set({ status: "open", updated_at: now })
+          .where("id", "=", booking.slot_id)
+          .execute();
+      }
+
+      await trx
+        .insertInto("audit_log")
+        .values({
+          entity_type: "booking",
+          entity_id: bookingId,
+          action: `state_change:${currentState}->${newState}`,
+          actor_id: options?.actor ?? "system",
+          changes: JSON.stringify(
+            options?.changes ?? {
+              status: { from: currentState, to: newState },
+            }
+          ),
+        })
         .execute();
-    }
-
-    // If postponed, reopen slot
-    if (newState === "AWAITING_PATIENT_RESCHEDULE") {
-      await this.database.db
-        .updateTable("slot")
-        .set({ status: "open", updated_at: now })
-        .where("id", "=", booking.slot_id)
-        .execute();
-    }
-
-    await this.createAuditLog(bookingId, currentState, newState, options?.changes, options?.actor);
+    });
 
     // --- Google Calendar integration (non-critical: errors must not roll back the transition) ---
-    await this.handleCalendarEvent(booking, currentState, newState, now).catch(() => {});
+    await this.handleCalendarEvent(booking, currentState, newState, now).catch((err: unknown) =>
+      this.logger.error(`handleCalendarEvent: ${err instanceof Error ? err.message : err}`)
+    );
   }
 
   private async handleCalendarEvent(
@@ -199,7 +217,11 @@ export class StateMachineService {
       ) {
         await this.googleCalendar
           .deleteEvent(booking.doctor_id, calendarId, booking.calendar_event_id)
-          .catch(() => {});
+          .catch((err: unknown) =>
+            this.logger.error(
+              `googleCalendar.deleteEvent: ${err instanceof Error ? err.message : err}`
+            )
+          );
         await this.database.db
           .updateTable("booking")
           .set({ calendar_event_id: null, updated_at: now })
@@ -231,7 +253,12 @@ export class StateMachineService {
             attendeeEmails: [booking.patient_email],
             addMeet: true,
           })
-          .catch(() => null);
+          .catch((err: unknown) => {
+            this.logger.error(
+              `googleCalendar.createEvent: ${err instanceof Error ? err.message : err}`
+            );
+            return null;
+          });
 
         if (event) {
           const meetUrl = (event as any).hangoutLink ?? (event as any).hangout_link ?? null;
@@ -247,29 +274,6 @@ export class StateMachineService {
         }
       }
     }
-  }
-
-  private async createAuditLog(
-    bookingId: string,
-    from: AppointmentState,
-    to: AppointmentState,
-    changes?: Record<string, { from: unknown; to: unknown }>,
-    actor?: string
-  ): Promise<void> {
-    await this.database.db
-      .insertInto("audit_log")
-      .values({
-        entity_type: "booking",
-        entity_id: bookingId,
-        action: `state_change:${from}->${to}`,
-        actor_id: actor ?? "system",
-        changes: JSON.stringify(
-          changes ?? {
-            status: { from, to },
-          }
-        ),
-      })
-      .execute();
   }
 
   async getExpiredBookings(): Promise<{ id: string; status: string; slot_id: string }[]> {

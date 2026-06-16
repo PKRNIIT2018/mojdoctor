@@ -5,13 +5,17 @@ import {
   ForbiddenException,
   HttpException,
   Inject,
+  Logger,
 } from "@nestjs/common";
 import { DatabaseService } from "../database/database.service";
 import { StateMachineService } from "./state-machine.service";
+import type { AppointmentState } from "./state-machine.service";
 import { NotificationsService } from "../notifications/notifications.service";
 
 @Injectable()
 export class BookingService {
+  private readonly logger = new Logger(BookingService.name);
+
   constructor(
     @Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(StateMachineService) private readonly stateMachine: StateMachineService,
@@ -89,53 +93,60 @@ export class BookingService {
 
     this.notifications
       .sendBookingConfirmation(createdBooking!.id, data.patientEmail, data.patientName)
-      .catch(() => {});
+      .catch((err: unknown) =>
+        this.logger.error(`sendBookingConfirmation: ${err instanceof Error ? err.message : err}`)
+      );
 
     this.notifications
       .sendNewBookingAlert(createdBooking!.id, data.doctorId, data.patientName)
-      .catch(() => {});
+      .catch((err: unknown) =>
+        this.logger.error(`sendNewBookingAlert: ${err instanceof Error ? err.message : err}`)
+      );
 
     return { booking: createdBooking, returningPatient };
   }
 
   async updatePaymentMethod(bookingId: string, paymentMethod: string) {
-    const booking = await this.database.db
-      .selectFrom("booking")
-      .selectAll()
-      .where("id", "=", bookingId)
-      .executeTakeFirst();
+    return this.database.db.transaction().execute(async (trx) => {
+      const booking = await trx
+        .selectFrom("booking")
+        .selectAll()
+        .where("id", "=", bookingId)
+        .forUpdate()
+        .executeTakeFirst();
 
-    if (!booking) throw new NotFoundException("Booking not found");
-    if (booking.status !== "PENDING_REVIEW") {
-      throw new BadRequestException("Can only change payment method on PENDING_REVIEW bookings");
-    }
-    if (booking.payment_method === paymentMethod) {
-      return { booking };
-    }
+      if (!booking) throw new NotFoundException("Booking not found");
+      if (booking.status !== "PENDING_REVIEW") {
+        throw new BadRequestException("Can only change payment method on PENDING_REVIEW bookings");
+      }
+      if (booking.payment_method === paymentMethod) {
+        return { booking };
+      }
 
-    const now = new Date();
-    await this.database.db
-      .updateTable("booking")
-      .set({ payment_method: paymentMethod, updated_at: now })
-      .where("id", "=", bookingId)
-      .execute();
+      const now = new Date();
+      await trx
+        .updateTable("booking")
+        .set({ payment_method: paymentMethod, updated_at: now })
+        .where("id", "=", bookingId)
+        .execute();
 
-    await this.database.db.deleteFrom("payment").where("booking_id", "=", bookingId).execute();
+      await trx.deleteFrom("payment").where("booking_id", "=", bookingId).execute();
 
-    await this.database.db
-      .insertInto("audit_log")
-      .values({
-        entity_type: "booking",
-        entity_id: bookingId,
-        action: "booking:payment_method_changed",
-        actor_id: "patient",
-        changes: JSON.stringify({
-          payment_method: { from: booking.payment_method, to: paymentMethod },
-        }),
-      })
-      .execute();
+      await trx
+        .insertInto("audit_log")
+        .values({
+          entity_type: "booking",
+          entity_id: bookingId,
+          action: "booking:payment_method_changed",
+          actor_id: "patient",
+          changes: JSON.stringify({
+            payment_method: { from: booking.payment_method, to: paymentMethod },
+          }),
+        })
+        .execute();
 
-    return { booking: { ...booking, payment_method: paymentMethod } };
+      return { booking: { ...booking, payment_method: paymentMethod } };
+    });
   }
 
   async approve(bookingId: string, paymentNote?: string, actor?: string) {
@@ -147,9 +158,10 @@ export class BookingService {
 
     if (!booking) throw new NotFoundException("Booking not found");
 
-    const newState = booking.payment_method === "other" ? "CONFIRMED" : "AWAITING_CARD";
+    const newState: AppointmentState =
+      booking.payment_method === "other" ? "CONFIRMED" : "AWAITING_CARD";
 
-    await this.stateMachine.transitionTo(bookingId, newState as any, { actor });
+    await this.stateMachine.transitionTo(bookingId, newState, { actor });
 
     const caseFile = await this.database.db
       .insertInto("case_file")
@@ -164,11 +176,15 @@ export class BookingService {
 
     this.notifications
       .sendBookingApproved(bookingId, booking.patient_email, booking.patient_name, "Doctor")
-      .catch(() => {});
+      .catch((err: unknown) =>
+        this.logger.error(`sendBookingApproved: ${err instanceof Error ? err.message : err}`)
+      );
 
     this.notifications
       .sendIntakeEmail(bookingId, booking.patient_email, booking.patient_name)
-      .catch(() => {});
+      .catch((err: unknown) =>
+        this.logger.error(`sendIntakeEmail: ${err instanceof Error ? err.message : err}`)
+      );
 
     return { booking: { ...booking, status: newState }, caseFile };
   }
@@ -185,7 +201,7 @@ export class BookingService {
       throw new BadRequestException("Payment method must be 'other' or 'as_agreed'");
     }
 
-    await this.stateMachine.transitionTo(bookingId, "CONFIRMED" as any, { actor });
+    await this.stateMachine.transitionTo(bookingId, "CONFIRMED" as AppointmentState, { actor });
 
     const caseFile = await this.database.db
       .insertInto("case_file")
@@ -200,11 +216,15 @@ export class BookingService {
 
     this.notifications
       .sendBookingApproved(bookingId, booking.patient_email, booking.patient_name, "Doctor")
-      .catch(() => {});
+      .catch((err: unknown) =>
+        this.logger.error(`sendBookingApproved: ${err instanceof Error ? err.message : err}`)
+      );
 
     this.notifications
       .sendIntakeEmail(bookingId, booking.patient_email, booking.patient_name)
-      .catch(() => {});
+      .catch((err: unknown) =>
+        this.logger.error(`sendIntakeEmail: ${err instanceof Error ? err.message : err}`)
+      );
 
     return { booking: { ...booking, status: "CONFIRMED" }, caseFile };
   }
@@ -229,9 +249,13 @@ export class BookingService {
       throw new BadRequestException("Some alternative slots are not available");
     }
 
-    await this.stateMachine.transitionTo(bookingId, "AWAITING_PATIENT_RESCHEDULE" as any, {
-      actor,
-    });
+    await this.stateMachine.transitionTo(
+      bookingId,
+      "AWAITING_PATIENT_RESCHEDULE" as AppointmentState,
+      {
+        actor,
+      }
+    );
 
     return { booking: { ...booking, status: "AWAITING_PATIENT_RESCHEDULE" } };
   }
@@ -245,11 +269,13 @@ export class BookingService {
 
     if (!booking) throw new NotFoundException("Booking not found");
 
-    await this.stateMachine.transitionTo(bookingId, "REJECTED" as any, { actor });
+    await this.stateMachine.transitionTo(bookingId, "REJECTED" as AppointmentState, { actor });
 
     this.notifications
       .sendBookingRejected(bookingId, booking.patient_email, booking.patient_name, reason)
-      .catch(() => {});
+      .catch((err: unknown) =>
+        this.logger.error(`sendBookingRejected: ${err instanceof Error ? err.message : err}`)
+      );
 
     return { booking: { ...booking, status: "REJECTED" }, reason };
   }
@@ -278,9 +304,13 @@ export class BookingService {
 
     if (!slot) throw new BadRequestException("Selected slot is not available");
 
-    await this.stateMachine.transitionTo(bookingId, "AWAITING_DOCTOR_REAPPROVAL" as any, {
-      actor: "patient",
-    });
+    await this.stateMachine.transitionTo(
+      bookingId,
+      "AWAITING_DOCTOR_REAPPROVAL" as AppointmentState,
+      {
+        actor: "patient",
+      }
+    );
 
     return { booking: { ...booking, status: "AWAITING_DOCTOR_REAPPROVAL" } };
   }
@@ -297,7 +327,7 @@ export class BookingService {
       throw new ForbiddenException("Email does not match booking");
     }
 
-    await this.stateMachine.transitionTo(bookingId, "CANCELLED_BY_PATIENT" as any, {
+    await this.stateMachine.transitionTo(bookingId, "CANCELLED_BY_PATIENT" as AppointmentState, {
       actor: "patient",
     });
 
@@ -308,7 +338,11 @@ export class BookingService {
         booking.patient_name,
         "patient"
       )
-      .catch(() => {});
+      .catch((err: unknown) =>
+        this.logger.error(
+          `sendCancellationNotification(patient): ${err instanceof Error ? err.message : err}`
+        )
+      );
 
     return { message: "Booking cancelled" };
   }
@@ -322,7 +356,9 @@ export class BookingService {
 
     if (!booking) throw new NotFoundException("Booking not found");
 
-    await this.stateMachine.transitionTo(bookingId, "CANCELLED_BY_DOCTOR" as any, { actor });
+    await this.stateMachine.transitionTo(bookingId, "CANCELLED_BY_DOCTOR" as AppointmentState, {
+      actor,
+    });
 
     this.notifications
       .sendCancellationNotification(
@@ -331,13 +367,17 @@ export class BookingService {
         booking.patient_name,
         "doctor"
       )
-      .catch(() => {});
+      .catch((err: unknown) =>
+        this.logger.error(
+          `sendCancellationNotification(doctor): ${err instanceof Error ? err.message : err}`
+        )
+      );
 
     return { message: "Booking cancelled by doctor" };
   }
 
   async complete(bookingId: string, actor?: string) {
-    await this.stateMachine.transitionTo(bookingId, "COMPLETED" as any, { actor });
+    await this.stateMachine.transitionTo(bookingId, "COMPLETED" as AppointmentState, { actor });
 
     const booking = await this.database.db
       .selectFrom("booking")
@@ -388,27 +428,33 @@ export class BookingService {
           summary,
           hasPrescription
         )
-        .catch(() => {});
+        .catch((err: unknown) =>
+          this.logger.error(`sendPostConsultSummary: ${err instanceof Error ? err.message : err}`)
+        );
     }
 
     return { message: "Consultation completed" };
   }
 
   async markNoShow(bookingId: string, actor?: string) {
-    await this.stateMachine.transitionTo(bookingId, "NO_SHOW" as any, { actor });
+    await this.stateMachine.transitionTo(bookingId, "NO_SHOW" as AppointmentState, { actor });
     return { message: "Patient marked as no-show" };
   }
 
-  async findByDoctor(doctorId: string) {
+  async findByDoctor(doctorId: string, page = 1, limit = 20) {
+    const offset = (page - 1) * limit;
     return this.database.db
       .selectFrom("booking")
       .selectAll()
       .where("doctor_id", "=", doctorId)
       .orderBy("created_at", "desc")
+      .limit(limit)
+      .offset(offset)
       .execute();
   }
 
-  async getConsultations(doctorId: string, status?: string) {
+  async getConsultations(doctorId: string, status?: string, page = 1, limit = 20) {
+    const offset = (page - 1) * limit;
     let query = this.database.db
       .selectFrom("booking")
       .innerJoin("slot", "slot.id", "booking.slot_id")
@@ -437,37 +483,52 @@ export class BookingService {
       query = query.where("booking.status", "=", status);
     }
 
-    return query.orderBy("slot.date", "desc").orderBy("slot.start_time", "desc").execute();
+    return query
+      .orderBy("slot.date", "desc")
+      .orderBy("slot.start_time", "desc")
+      .limit(limit)
+      .offset(offset)
+      .execute();
   }
 
-  async findByStatus(status: string) {
+  async findByStatus(status: string, page = 1, limit = 20) {
+    const offset = (page - 1) * limit;
     return this.database.db
       .selectFrom("booking")
       .selectAll()
       .where("status", "=", status)
       .orderBy("created_at", "desc")
+      .limit(limit)
+      .offset(offset)
       .execute();
   }
 
-  async findPendingReview() {
+  async findPendingReview(page = 1, limit = 20) {
+    const offset = (page - 1) * limit;
     return this.database.db
       .selectFrom("booking")
       .selectAll()
       .where("status", "=", "PENDING_REVIEW")
       .orderBy("created_at", "asc")
+      .limit(limit)
+      .offset(offset)
       .execute();
   }
 
-  async findByPatient(email: string) {
+  async findByPatient(email: string, page = 1, limit = 20) {
+    const offset = (page - 1) * limit;
     return this.database.db
       .selectFrom("booking")
       .selectAll()
       .where("patient_email", "=", email)
       .orderBy("created_at", "desc")
+      .limit(limit)
+      .offset(offset)
       .execute();
   }
 
-  async getPatientHistory(email: string, doctorId: string) {
+  async getPatientHistory(email: string, doctorId: string, page = 1, limit = 20) {
+    const offset = (page - 1) * limit;
     return this.database.db
       .selectFrom("booking")
       .innerJoin("slot", "slot.id", "booking.slot_id")
@@ -493,6 +554,8 @@ export class BookingService {
       .where("booking.doctor_id", "=", doctorId)
       .orderBy("slot.date", "desc")
       .orderBy("slot.start_time", "desc")
+      .limit(limit)
+      .offset(offset)
       .execute();
   }
 

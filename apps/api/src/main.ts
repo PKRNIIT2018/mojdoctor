@@ -4,6 +4,7 @@ import helmet from "helmet";
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, Logger } from "@nestjs/common";
 import { AppModule } from "./app.module";
+import { AllExceptionsFilter } from "./utils/error-filter";
 import express from "express";
 
 const logger = new Logger("Bootstrap");
@@ -38,6 +39,8 @@ async function bootstrap() {
       stopAtFirstError: true,
     })
   );
+
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   if (!process.env.STRIPE_WEBHOOK_SECRET) {
     logger.warn("STRIPE_WEBHOOK_SECRET missing — webhook endpoints will fail");

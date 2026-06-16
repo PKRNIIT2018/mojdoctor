@@ -17,8 +17,9 @@ export class DoctorService {
       .executeTakeFirst();
   }
 
-  async findAll() {
-    return this.database.db.selectFrom("doctor").selectAll().execute();
+  async findAll(page = 1, limit = 50) {
+    const offset = (page - 1) * limit;
+    return this.database.db.selectFrom("doctor").selectAll().limit(limit).offset(offset).execute();
   }
 
   async findPublic() {
