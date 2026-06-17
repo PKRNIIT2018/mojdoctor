@@ -19,7 +19,9 @@ async function bootstrap(): Promise<(req: IncomingMessage, res: ServerResponse) 
 
   try {
     const path = __req("path") as typeof import("path");
-    const distDir = path.resolve(process.cwd(), "dist");
+    // process.cwd() = repo root on Vercel (/var/task), not apps/api.
+    // __dirname = /var/task/apps/api/api → ../dist = /var/task/apps/api/dist
+    const distDir = path.resolve(__dirname, "..", "dist");
 
     const { AppModule } = __req(path.join(distDir, "app.module")) as {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
