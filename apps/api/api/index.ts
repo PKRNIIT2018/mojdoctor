@@ -1,14 +1,14 @@
 import type { IncomingMessage, ServerResponse } from "http";
 
-// All requires go through a runtime-only wrapper so esbuild cannot statically
-// follow any of them and bundle them at build time.  esbuild cannot analyse
-// eval(), so __req below is effectively invisible to the bundler and all
-// resolution happens via Node's native require at Lambda startup time.
-// Node 22.12+ / 24 supports require(esm) natively, so ESM packages such as
-// kysely load without issues.
+// Capture the CJS module-scoped require via eval so that:
+// 1. esbuild cannot statically follow the call (eval is opaque to the bundler)
+// 2. The function runs in MODULE scope (not global scope), so `require` IS defined
+// new Function() was the previous approach but fails on Vercel because
+// new Function runs in GLOBAL scope where `require` is not set.
+// Node 22.12+ / 24 supports require(esm) natively so ESM packages (kysely) load fine.
 //
-// eslint-disable-next-line @typescript-eslint/no-implied-eval, no-new-func, @typescript-eslint/no-unsafe-assignment
-const __req = new Function("id", "return require(id)") as unknown as (id: string) => any;
+// eslint-disable-next-line no-eval, @typescript-eslint/no-implied-eval
+const __req = eval("require") as (id: string) => any;
 
 let cachedServer: ((req: IncomingMessage, res: ServerResponse) => void) | null = null;
 let initError: Error | null = null;
