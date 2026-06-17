@@ -7,8 +7,8 @@ import type { IncomingMessage, ServerResponse } from "http";
 // Node 22.12+ / 24 supports require(esm) natively, so ESM packages such as
 // kysely load without issues.
 //
-// eslint-disable-next-line @typescript-eslint/no-implied-eval, no-new-func
-const __req: (id: string) => any = new Function("id", "return require(id)");
+// eslint-disable-next-line @typescript-eslint/no-implied-eval, no-new-func, @typescript-eslint/no-unsafe-assignment
+const __req = new Function("id", "return require(id)") as unknown as (id: string) => any;
 
 let cachedServer: ((req: IncomingMessage, res: ServerResponse) => void) | null = null;
 let initError: Error | null = null;
@@ -22,7 +22,8 @@ async function bootstrap(): Promise<(req: IncomingMessage, res: ServerResponse) 
     const distDir = path.resolve(process.cwd(), "dist");
 
     const { AppModule } = __req(path.join(distDir, "app.module")) as {
-      AppModule: unknown;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      AppModule: any;
     };
     const { NestFactory } = __req("@nestjs/core") as typeof import("@nestjs/core");
     const { ExpressAdapter } = __req(
