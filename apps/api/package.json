@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "ts-node-dev --transpile-only --respawn src/main.ts",
+    "prebuild": "npm run build --prefix ../../packages/db && npm run build --prefix ../../packages/shared && npm run build --prefix ../../packages/video && npm run build --prefix ../../packages/email && npm run build --prefix ../../packages/prescription",
     "build": "nest build",
     "start": "node dist/main",
     "test": "vitest run",
