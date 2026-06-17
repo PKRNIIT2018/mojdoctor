@@ -1,60 +1,28 @@
-import "reflect-metadata";
-import express from "express";
-import { AppModule } from "../dist/app.module";
-import { NestFactory } from "@nestjs/core";
-import { ExpressAdapter } from "@nestjs/platform-express";
-import { ValidationPipe, Logger } from "@nestjs/common";
-import helmet from "helmet";
-import * as Sentry from "@sentry/node";
 import type { IncomingMessage, ServerResponse } from "http";
 
-const expressApp = express();
-let initialized = false;
-
-async function bootstrap() {
-  if (initialized) return;
-
-  const logger = new Logger("Bootstrap");
-
-  if (process.env.SENTRY_DSN) {
-    Sentry.init({
-      dsn: process.env.SENTRY_DSN,
-      tracesSampleRate: 0.1,
-      environment: process.env.NODE_ENV,
-    });
-  }
-
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp), {
-    logger: ["log", "error", "warn"],
-    snapshot: true,
-  });
-
-  app.use(helmet());
-  app.getHttpAdapter().getInstance().set("trust proxy", 1);
-  app.enableCors({ origin: process.env.FRONTEND_URL ?? "*", credentials: true });
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      stopAtFirstError: true,
-    })
-  );
-
-  if (!process.env.STRIPE_WEBHOOK_SECRET)
-    logger.warn("STRIPE_WEBHOOK_SECRET missing — webhook endpoints will fail");
-  if (!process.env.STRIPE_SECRET_KEY)
-    logger.warn("STRIPE_SECRET_KEY missing — payment endpoints will fail");
-
-  app.use(express.json({ limit: "1mb" }));
-  await app.init();
-  initialized = true;
-}
-
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
+export default async function handler(_req: IncomingMessage, res: ServerResponse) {
   try {
-    await bootstrap();
-    expressApp(req as any, res as any);
+    const fs = require("fs");
+    const path = require("path");
+
+    // Check if @repo/db's compiled dist exists
+    const dbPkgPath = path.join(process.cwd(), "node_modules", "@repo", "db", "package.json");
+    const pkg = JSON.parse(fs.readFileSync(dbPkgPath, "utf-8"));
+
+    const distMain = path.join(process.cwd(), "node_modules", "@repo", "db", pkg.main);
+    const distExists = fs.existsSync(distMain);
+
+    res.statusCode = 200;
+    res.setHeader("content-type", "application/json");
+    res.end(
+      JSON.stringify({
+        cwd: process.cwd(),
+        main: pkg.main,
+        distMain,
+        distExists,
+        files: fs.readdirSync(path.dirname(distMain)).slice(0, 20),
+      })
+    );
   } catch (err: any) {
     res.statusCode = 500;
     res.setHeader("content-type", "application/json");
@@ -62,8 +30,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       JSON.stringify({
         error: err.message,
         code: err.code,
-        name: err.constructor?.name,
-        stack: err.stack?.split("\n").slice(0, 10),
+        stack: err.stack?.split("\n").slice(0, 8),
       })
     );
   }
