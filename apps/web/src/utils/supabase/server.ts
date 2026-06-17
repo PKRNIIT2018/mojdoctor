@@ -18,12 +18,7 @@ export async function createClient() {
         ) {
           try {
             for (const { name, value, options } of cookiesToSet) {
-              cookieStore.set(name, value, {
-                httpOnly: true,
-                secure: true,
-                sameSite: "lax",
-                ...options,
-              } as never);
+              cookieStore.set(name, value, options as never);
             }
           } catch {
             // Called from Server Component — can ignore

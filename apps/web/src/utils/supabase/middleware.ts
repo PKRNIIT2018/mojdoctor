@@ -18,12 +18,7 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, {
-              httpOnly: true,
-              secure: true,
-              sameSite: "lax",
-              ...options,
-            } as never)
+            supabaseResponse.cookies.set(name, value, options as never)
           );
         },
       },
