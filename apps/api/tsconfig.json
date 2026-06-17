@@ -21,7 +21,9 @@
     "paths": {
       "@repo/db": ["../../packages/db/src"],
       "@repo/email": ["../../packages/email/src"],
-      "@repo/shared": ["../../packages/shared/src"]
+      "@repo/shared": ["../../packages/shared/src"],
+      "@repo/video": ["../../packages/video/src"],
+      "@repo/prescription": ["../../packages/prescription/src"]
     }
   },
   "include": ["src/**/*"]
