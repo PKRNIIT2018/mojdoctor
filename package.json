@@ -15,7 +15,7 @@
     "db:migrate": "turbo db:migrate",
     "db:seed": "turbo db:seed",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "overrides": {
     "rxjs": "^7.8.2",
