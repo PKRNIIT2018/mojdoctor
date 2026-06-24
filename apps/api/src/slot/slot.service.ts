@@ -246,7 +246,7 @@ export class SlotService {
         const startMinutes = (startParts[0] ?? 0) * 60 + (startParts[1] ?? 0);
         const endMinutes = (endParts[0] ?? 0) * 60 + (endParts[1] ?? 0);
         const duration = rule.slot_duration;
-        const breakTime = rule.break_between;
+        const breakTime = rule.break_between ?? 0;
 
         let slotStart = startMinutes;
         while (slotStart + duration <= endMinutes) {

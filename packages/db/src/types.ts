@@ -189,14 +189,14 @@ export interface SlotRuleTable {
   start_time: string;
   end_time: string;
   slot_duration: Generated<number>;
-  break_between: Generated<number>;
+  break_between: Generated<number | null>;
   mode: Generated<string>;
   date_range: ColumnType<
     { from: string; to: string },
     string | undefined,
     string | undefined
   > | null;
-  is_active: Generated<number>;
+  is_active: Generated<number | null>;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }
