@@ -20,4 +20,4 @@ api-tests/
 .github/
 .husky/
 .githooks/
-supabase/
+/supabase/
