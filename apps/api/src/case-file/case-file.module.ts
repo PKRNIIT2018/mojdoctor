@@ -1,10 +1,10 @@
 import { Module } from "@nestjs/common";
 import { CaseFileController } from "./case-file.controller";
 import { CaseFileService } from "./case-file.service";
-import { DoctorModule } from "../doctor/doctor.module";
+import { GoogleModule } from "../google/google.module";
 
 @Module({
-  imports: [DoctorModule],
+  imports: [GoogleModule],
   controllers: [CaseFileController],
   providers: [CaseFileService],
   exports: [CaseFileService],
