@@ -7,10 +7,12 @@
   "scripts": {
     "build": "tsc",
     "db:migrate": "tsx src/migrate.ts",
+    "db:seed": "tsx src/seed.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@repo/shared": "*",
+    "@supabase/supabase-js": "^2.108.2",
     "kysely": "^0.29.2",
     "pg": "^8.22.0",
     "zod": "^3.24.0"
