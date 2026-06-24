@@ -18,6 +18,7 @@
     "resolveJsonModule": true,
     "incremental": true,
     "noEmit": true,
+    "rootDir": "../../",
     "paths": {
       "@repo/db": ["../../packages/db/src"],
       "@repo/email": ["../../packages/email/src"],

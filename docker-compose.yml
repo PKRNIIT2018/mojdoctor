@@ -1,32 +1,12 @@
 services:
-  postgres:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: consultation
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    depends_on:
-      postgres:
-        condition: service_healthy
     ports:
       - "4000:4000"
     env_file: apps/api/.env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/consultation
       API_PORT: "4000"
       FRONTEND_URL: http://localhost:3000
     develop:
@@ -58,16 +38,10 @@ services:
     build:
       context: .
       dockerfile: apps/inngest/Dockerfile
-    depends_on:
-      postgres:
-        condition: service_healthy
     ports:
       - "3002:3002"
     env_file: apps/api/.env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/consultation
       INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
       INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
 
-volumes:
-  pgdata:

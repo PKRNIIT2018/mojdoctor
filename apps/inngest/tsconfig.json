@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "declaration": true,
     "removeComments": true,
     "allowSyntheticDefaultImports": true,
     "target": "ES2022",
@@ -16,6 +15,7 @@
     "resolveJsonModule": true,
     "incremental": true,
     "noEmit": true,
+    "rootDir": "../../",
     "paths": {
       "@repo/db": ["../../packages/db/src"],
       "@repo/email": ["../../packages/email/src"],
