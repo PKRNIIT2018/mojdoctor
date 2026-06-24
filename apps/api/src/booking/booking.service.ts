@@ -11,7 +11,7 @@ import { DatabaseService } from "../database/database.service";
 import { StateMachineService } from "./state-machine.service";
 import type { AppointmentState } from "./state-machine.service";
 import { NotificationsService } from "../notifications/notifications.service";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { CaseFileService } from "../case-file/case-file.service";
 
 @Injectable()

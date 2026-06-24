@@ -2,7 +2,10 @@
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
+  "entryFile": "serverless",
   "compilerOptions": {
+    "webpack": true,
+    "webpackConfigPath": "webpack.config.js",
     "deleteOutDir": true
   }
 }
