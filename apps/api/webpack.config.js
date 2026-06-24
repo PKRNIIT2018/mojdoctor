@@ -2,6 +2,8 @@
 // Alias @repo/* to TS source so webpack compiles workspace packages directly —
 // avoiding pre-built CJS dist files that would try to require() ESM-only deps
 // like kysely at runtime. externals:[] is explicit: bundle everything.
+// transpileOnly:true on ts-loader skips rootDir validation (TS6059) since
+// packages/* are outside apps/api/src; type checking is a separate CI step.
 const path = require("path");
 
 module.exports = function (options) {
@@ -9,10 +11,20 @@ module.exports = function (options) {
     (p) => p.constructor.name !== "ForkTsCheckerWebpackPlugin"
   );
   const root = path.resolve(__dirname, "../..");
+
+  const rules = (options.module?.rules ?? []).map((rule) => {
+    const loader = rule.loader ?? (typeof rule.use === "string" ? rule.use : rule.use?.loader);
+    if (loader === "ts-loader") {
+      return { ...rule, use: { loader: "ts-loader", options: { transpileOnly: true } } };
+    }
+    return rule;
+  });
+
   return {
     ...options,
     externals: [],
     plugins,
+    module: { ...options.module, rules },
     resolve: {
       ...options.resolve,
       alias: {
