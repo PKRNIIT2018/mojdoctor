@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, Inject, ForbiddenException, Logger } fro
 import { DatabaseService } from "../database/database.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { generatePrescriptionPdf, encryptPdfWithPin } from "@repo/prescription";
-import { assertCaseFileOwnership, assertNoteOwnership } from "../common/guards/ownership.helper";
+import { assertOwnership } from "../common/guards/ownership.helper";
 
 @Injectable()
 export class NotesService {
@@ -14,7 +14,7 @@ export class NotesService {
   ) {}
 
   async findByCaseFile(caseFileId: string, doctorId: string) {
-    await assertCaseFileOwnership(this.database, caseFileId, doctorId);
+    await assertOwnership(this.database, "case_file", caseFileId, doctorId);
     return this.database.db
       .selectFrom("doctor_note")
       .selectAll()
@@ -30,7 +30,7 @@ export class NotesService {
       .where("id", "=", id)
       .executeTakeFirst();
     if (!note) throw new NotFoundException("Note not found");
-    if (doctorId) await assertNoteOwnership(this.database, id, doctorId);
+    if (doctorId) await assertOwnership(this.database, "note", id, doctorId);
     return note;
   }
 
@@ -41,7 +41,7 @@ export class NotesService {
     sections?: { heading: string; content: string }[];
     summary?: string;
   }) {
-    await assertCaseFileOwnership(this.database, data.caseFileId, data.doctorId);
+    await assertOwnership(this.database, "case_file", data.caseFileId, data.doctorId);
     return this.database.db
       .insertInto("doctor_note")
       .values({
@@ -63,7 +63,7 @@ export class NotesService {
       summary?: string;
     }
   ) {
-    await assertNoteOwnership(this.database, id, doctorId);
+    await assertOwnership(this.database, "note", id, doctorId);
     return this.database.db
       .updateTable("doctor_note")
       .set({
@@ -78,13 +78,13 @@ export class NotesService {
   }
 
   async delete(id: string, doctorId: string) {
-    await assertNoteOwnership(this.database, id, doctorId);
+    await assertOwnership(this.database, "note", id, doctorId);
     await this.database.db.deleteFrom("doctor_note").where("id", "=", id).execute();
     return { message: "Note deleted" };
   }
 
   async getPrescriptions(noteId: string, doctorId: string) {
-    await assertNoteOwnership(this.database, noteId, doctorId);
+    await assertOwnership(this.database, "note", noteId, doctorId);
     return this.database.db
       .selectFrom("prescription")
       .selectAll()
@@ -101,7 +101,7 @@ export class NotesService {
     instructions?: string;
     validUntil?: string;
   }) {
-    await assertNoteOwnership(this.database, data.doctorNoteId, data.doctorId);
+    await assertOwnership(this.database, "note", data.doctorNoteId, data.doctorId);
 
     const prescription = await this.database.db
       .insertInto("prescription")

@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { google } from "googleapis";
+import { createOAuth2Client } from "@repo/video";
 import { DatabaseService } from "../database/database.service";
 
 const SCOPES = [
@@ -46,9 +47,10 @@ export class GoogleService {
       );
     }
 
-    const oauth2Client = this.getOAuth2Client();
-    oauth2Client.setCredentials({ refresh_token: doctor.google_refresh_token });
-    return oauth2Client;
+    const clientId = this.configService.get<string>("GOOGLE_OAUTH_CLIENT_ID")!;
+    const clientSecret = this.configService.get<string>("GOOGLE_OAUTH_CLIENT_SECRET")!;
+    const redirectUri = this.configService.get<string>("GOOGLE_REDIRECT_URI")!;
+    return createOAuth2Client(clientId, clientSecret, redirectUri, doctor.google_refresh_token);
   }
 
   getGoogleAuthUrl(state: string): string {

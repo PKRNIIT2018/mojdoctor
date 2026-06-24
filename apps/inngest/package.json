@@ -12,6 +12,7 @@
     "@repo/db": "*",
     "@repo/email": "*",
     "@repo/shared": "*",
+    "@repo/video": "*",
     "express": "^4.21.0",
     "googleapis": "^140.0.0",
     "inngest": "^3.0.0"

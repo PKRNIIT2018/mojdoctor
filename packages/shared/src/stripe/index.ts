@@ -2,7 +2,7 @@ import Stripe from "stripe";
 
 const key = process.env.STRIPE_SECRET_KEY;
 
-export const stripe: any = key ? new Stripe(key, {} as any) : null;
+const stripe: any = key ? new Stripe(key, { apiVersion: "2025-11-17.clover" as any }) : null;
 
 export function getStripe(): any {
   if (!stripe) throw new Error("STRIPE_SECRET_KEY not configured");

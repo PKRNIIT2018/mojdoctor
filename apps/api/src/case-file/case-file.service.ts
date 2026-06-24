@@ -1,11 +1,7 @@
 import { Injectable, NotFoundException, Inject, Logger } from "@nestjs/common";
 import { DatabaseService } from "../database/database.service";
 import { GoogleDriveService } from "../google/google-drive.service";
-import {
-  assertCaseFileOwnership,
-  assertBookingOwnership,
-  assertDocumentOwnership,
-} from "../common/guards/ownership.helper";
+import { assertOwnership } from "../common/guards/ownership.helper";
 
 @Injectable()
 export class CaseFileService {
@@ -27,7 +23,7 @@ export class CaseFileService {
   }
 
   async findByBooking(bookingId: string, doctorId: string) {
-    await assertBookingOwnership(this.database, bookingId, doctorId);
+    await assertOwnership(this.database, "booking", bookingId, doctorId);
     const files = await this.database.db
       .selectFrom("case_file")
       .selectAll()
@@ -43,7 +39,7 @@ export class CaseFileService {
       .where("id", "=", id)
       .executeTakeFirst();
     if (!file) throw new NotFoundException("Case file not found");
-    if (doctorId) await assertCaseFileOwnership(this.database, id, doctorId);
+    if (doctorId) await assertOwnership(this.database, "case_file", id, doctorId);
     return file;
   }
 
@@ -180,7 +176,7 @@ export class CaseFileService {
       .executeTakeFirst();
     if (!doc) throw new NotFoundException("Document not found");
 
-    await assertDocumentOwnership(this.database, documentId, doctorId);
+    await assertOwnership(this.database, "document", documentId, doctorId);
 
     if (doc.r2_key) {
       try {
@@ -212,6 +208,32 @@ export class CaseFileService {
       .where("case_file_id", "=", caseFileId)
       .orderBy("created_at", "desc")
       .execute();
+  }
+
+  async createForBooking(data: {
+    bookingId: string;
+    doctorId: string;
+    patientName: string;
+    patientEmail: string;
+  }) {
+    const existing = await this.database.db
+      .selectFrom("case_file")
+      .select("id")
+      .where("booking_id", "=", data.bookingId)
+      .executeTakeFirst();
+
+    if (existing) return existing;
+
+    return this.database.db
+      .insertInto("case_file")
+      .values({
+        booking_id: data.bookingId,
+        doctor_id: data.doctorId,
+        patient_name: data.patientName,
+        patient_email: data.patientEmail,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
   }
 
   async getIntakeResponses(caseFileId: string, doctorId: string) {

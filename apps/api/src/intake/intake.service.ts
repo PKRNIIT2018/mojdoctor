@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Inject, ForbiddenException } from "@nestjs/common";
 import { DatabaseService } from "../database/database.service";
-import { assertBookingOwnership } from "../common/guards/ownership.helper";
+import { assertOwnership } from "../common/guards/ownership.helper";
 
 @Injectable()
 export class IntakeService {
@@ -106,7 +106,7 @@ export class IntakeService {
   }
 
   async getResponses(bookingId: string, doctorId: string) {
-    await assertBookingOwnership(this.database, bookingId, doctorId);
+    await assertOwnership(this.database, "booking", bookingId, doctorId);
     return this.database.db
       .selectFrom("intake_response")
       .selectAll()

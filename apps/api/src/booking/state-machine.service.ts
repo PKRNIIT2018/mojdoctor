@@ -80,15 +80,11 @@ export class StateMachineService {
     @Inject(ConfigService) private readonly configService: ConfigService
   ) {}
 
-  getTransitionsFrom(state: AppointmentState): Transition[] {
-    return this.transitions.filter((t) => t.from.includes(state));
-  }
-
-  canTransition(from: AppointmentState, to: AppointmentState): boolean {
+  private canTransition(from: AppointmentState, to: AppointmentState): boolean {
     return this.transitions.some((t) => t.from.includes(from) && t.to === to);
   }
 
-  isTerminal(state: AppointmentState): boolean {
+  private isTerminal(state: AppointmentState): boolean {
     return this.terminalStates.has(state);
   }
 
@@ -305,13 +301,5 @@ export class StateMachineService {
       .where("status", "=", "AWAITING_PATIENT_RESCHEDULE")
       .where("current_state_entered_at", "<", fortyEightHoursAgo)
       .execute();
-  }
-
-  async autoExpireBookings(): Promise<number> {
-    const expired = await this.getExpiredBookings();
-    for (const booking of expired) {
-      await this.transitionTo(booking.id as string, "EXPIRED");
-    }
-    return expired.length;
   }
 }

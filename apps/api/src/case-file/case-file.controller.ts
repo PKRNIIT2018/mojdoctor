@@ -83,7 +83,8 @@ export class CaseFileController {
   @UseInterceptors(
     FileInterceptor("file", {
       storage: memoryStorage(),
-      limits: { fileSize: 10 * 1024 * 1024 },
+      // @ts-expect-error fieldNestingDepth exists in multer 2.x but is missing from @types/multer@2.1.0
+      limits: { fieldNestingDepth: 10, files: 1, fileSize: 10 * 1024 * 1024 },
       fileFilter: (_req, file, cb) => {
         const allowed = [
           "application/pdf",

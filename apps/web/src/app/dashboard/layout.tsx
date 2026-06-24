@@ -8,7 +8,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   } = await supabase.auth.getUser();
 
   let isAdmin = false;
-  if (user?.email && process.env.SUPABASE_SECRET_KEY) {
+  if (user?.email && process.env.SUPABASE_SERVICE_ROLE_KEY) {
     try {
       const admin = createAdminClient();
       const { data: doctor } = await admin

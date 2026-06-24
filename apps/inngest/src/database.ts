@@ -14,10 +14,3 @@ export function getDb(): Kysely<Database> {
   }
   return _db;
 }
-
-export async function closeDb() {
-  if (_db) {
-    await _db.destroy();
-    _db = null;
-  }
-}

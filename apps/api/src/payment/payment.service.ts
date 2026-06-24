@@ -8,7 +8,9 @@ import {
 import { DatabaseService } from "../database/database.service";
 import { getStripe, STRIPE_CONSULT_AMOUNT, STRIPE_CURRENCY } from "@repo/shared";
 import { StripeConnectService } from "./stripe-connect.service";
-import { assertPaymentOwnership } from "../common/guards/ownership.helper";
+import { StateMachineService } from "../booking/state-machine.service";
+import { CaseFileService } from "../case-file/case-file.service";
+import { assertOwnership } from "../common/guards/ownership.helper";
 type StripeWebhookEvent = { type: string; data: { object: unknown } };
 
 const PLATFORM_FEE_PERCENT = 20;
@@ -17,7 +19,9 @@ const PLATFORM_FEE_PERCENT = 20;
 export class PaymentService {
   constructor(
     @Inject(DatabaseService) private readonly database: DatabaseService,
-    @Inject(StripeConnectService) private readonly stripeConnectService: StripeConnectService
+    @Inject(StripeConnectService) private readonly stripeConnectService: StripeConnectService,
+    @Inject(StateMachineService) private readonly stateMachine: StateMachineService,
+    @Inject(CaseFileService) private readonly caseFileService: CaseFileService
   ) {}
 
   async findByBooking(bookingId: string) {
@@ -119,11 +123,7 @@ export class PaymentService {
       .where("stripe_setup_intent_id", "=", setupIntentId)
       .execute();
 
-    await this.database.db
-      .updateTable("booking")
-      .set({ status: "CONFIRMED", updated_at: new Date() })
-      .where("id", "=", bookingId)
-      .execute();
+    await this.stateMachine.transitionTo(bookingId, "CONFIRMED", { actor: "patient" });
 
     const existingCaseFile = await this.database.db
       .selectFrom("case_file")
@@ -139,15 +139,12 @@ export class PaymentService {
         .executeTakeFirst();
 
       if (booking) {
-        await this.database.db
-          .insertInto("case_file")
-          .values({
-            booking_id: bookingId,
-            doctor_id: booking.doctor_id,
-            patient_name: booking.patient_name,
-            patient_email: booking.patient_email,
-          })
-          .execute();
+        await this.caseFileService.createForBooking({
+          bookingId,
+          doctorId: booking.doctor_id,
+          patientName: booking.patient_name,
+          patientEmail: booking.patient_email,
+        });
       }
     }
 
@@ -155,7 +152,7 @@ export class PaymentService {
   }
 
   async capturePayment(paymentId: string, doctorId?: string) {
-    if (doctorId) await assertPaymentOwnership(this.database, paymentId, doctorId);
+    if (doctorId) await assertOwnership(this.database, "payment", paymentId, doctorId);
     const payment = await this.database.db
       .selectFrom("payment")
       .selectAll()
@@ -213,17 +210,13 @@ export class PaymentService {
       .where("id", "=", paymentId)
       .execute();
 
-    await this.database.db
-      .updateTable("booking")
-      .set({ status: "CAPTURED", updated_at: new Date() })
-      .where("id", "=", payment.booking_id)
-      .execute();
+    await this.stateMachine.transitionTo(payment.booking_id, "CAPTURED", { actor: doctorId });
 
     return { status: intent.status, capturedAt: new Date() };
   }
 
   async refundPayment(paymentId: string, amount?: number, doctorId?: string) {
-    if (doctorId) await assertPaymentOwnership(this.database, paymentId, doctorId);
+    if (doctorId) await assertOwnership(this.database, "payment", paymentId, doctorId);
     const payment = await this.database.db
       .selectFrom("payment")
       .selectAll()
@@ -259,7 +252,7 @@ export class PaymentService {
   }
 
   async voidPayment(paymentId: string, doctorId?: string) {
-    if (doctorId) await assertPaymentOwnership(this.database, paymentId, doctorId);
+    if (doctorId) await assertOwnership(this.database, "payment", paymentId, doctorId);
     const payment = await this.database.db
       .selectFrom("payment")
       .selectAll()
@@ -339,11 +332,7 @@ export class PaymentService {
           .where("stripe_payment_intent_id", "=", pi.id)
           .executeTakeFirst();
         if (payment) {
-          await this.database.db
-            .updateTable("booking")
-            .set({ status: "PAYMENT_FAILED", updated_at: new Date() })
-            .where("id", "=", payment.booking_id)
-            .execute();
+          await this.stateMachine.transitionTo(payment.booking_id, "PAYMENT_FAILED");
         }
         break;
       }

@@ -1,71 +1,84 @@
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import type { DatabaseService } from "../../database/database.service";
 
-export async function assertBookingOwnership(
-  db: DatabaseService,
-  bookingId: string,
-  doctorId: string
-) {
-  const booking = await db.db
-    .selectFrom("booking")
-    .select("doctor_id")
-    .where("id", "=", bookingId)
-    .executeTakeFirst();
-  if (!booking) throw new NotFoundException("Booking not found");
-  if (booking.doctor_id !== doctorId) throw new ForbiddenException();
-}
+type OwnershipConfig = {
+  table: string;
+  notFound: string;
+  join?: {
+    leftTable: string;
+    leftCol: string;
+    rightCol: string;
+    selectCol: string;
+    whereCol: string;
+  };
+};
 
-export async function assertCaseFileOwnership(
-  db: DatabaseService,
-  caseFileId: string,
-  doctorId: string
-) {
-  const file = await db.db
-    .selectFrom("case_file")
-    .select("doctor_id")
-    .where("id", "=", caseFileId)
-    .executeTakeFirst();
-  if (!file) throw new NotFoundException("Case file not found");
-  if (file.doctor_id !== doctorId) throw new ForbiddenException();
-}
+// ponytail: as any on db queries — Kysely table names are strongly typed, these are runtime config strings
+const OWNERSHIP_MAP: Record<string, OwnershipConfig> = {
+  booking: { table: "booking", notFound: "Booking not found" },
+  case_file: { table: "case_file", notFound: "Case file not found" },
+  note: {
+    table: "doctor_note",
+    notFound: "Note not found",
+    join: {
+      leftTable: "case_file",
+      leftCol: "case_file.id",
+      rightCol: "doctor_note.case_file_id",
+      selectCol: "case_file.doctor_id",
+      whereCol: "doctor_note.id",
+    },
+  },
+  payment: {
+    table: "payment",
+    notFound: "Payment not found",
+    join: {
+      leftTable: "booking",
+      leftCol: "booking.id",
+      rightCol: "payment.booking_id",
+      selectCol: "booking.doctor_id",
+      whereCol: "payment.id",
+    },
+  },
+  document: {
+    table: "case_file_document",
+    notFound: "Document not found",
+    join: {
+      leftTable: "case_file",
+      leftCol: "case_file.id",
+      rightCol: "case_file_document.case_file_id",
+      selectCol: "case_file.doctor_id",
+      whereCol: "case_file_document.id",
+    },
+  },
+};
 
-export async function assertNoteOwnership(db: DatabaseService, noteId: string, doctorId: string) {
-  const note = await db.db
-    .selectFrom("doctor_note")
-    .innerJoin("case_file", "case_file.id", "doctor_note.case_file_id")
-    .select("case_file.doctor_id")
-    .where("doctor_note.id", "=", noteId)
-    .executeTakeFirst();
-  if (!note) throw new NotFoundException("Note not found");
-  if (note.doctor_id !== doctorId) throw new ForbiddenException();
-}
-
-export async function assertPaymentOwnership(
+export async function assertOwnership(
   db: DatabaseService,
-  paymentId: string,
+  type: keyof typeof OWNERSHIP_MAP,
+  entityId: string,
   doctorId: string
-) {
-  const payment = await db.db
-    .selectFrom("payment")
-    .innerJoin("booking", "booking.id", "payment.booking_id")
-    .select("booking.doctor_id")
-    .where("payment.id", "=", paymentId)
-    .executeTakeFirst();
-  if (!payment) throw new NotFoundException("Payment not found");
-  if (payment.doctor_id !== doctorId) throw new ForbiddenException();
-}
+): Promise<void> {
+  const cfg = OWNERSHIP_MAP[type];
+  if (!cfg) {
+    throw new NotFoundException(`${type} not found`);
+  }
 
-export async function assertDocumentOwnership(
-  db: DatabaseService,
-  documentId: string,
-  doctorId: string
-) {
-  const doc = await db.db
-    .selectFrom("case_file_document")
-    .innerJoin("case_file", "case_file.id", "case_file_document.case_file_id")
-    .select("case_file.doctor_id")
-    .where("case_file_document.id", "=", documentId)
-    .executeTakeFirst();
-  if (!doc) throw new NotFoundException("Document not found");
-  if (doc.doctor_id !== doctorId) throw new ForbiddenException();
+  let row: { doctor_id: string } | undefined;
+  if (cfg.join) {
+    row = await (db.db as any)
+      .selectFrom(cfg.table)
+      .innerJoin(cfg.join.leftTable, cfg.join.leftCol, cfg.join.rightCol)
+      .select(cfg.join.selectCol)
+      .where(cfg.join.whereCol, "=", entityId)
+      .executeTakeFirst();
+  } else {
+    row = await (db.db as any)
+      .selectFrom(cfg.table)
+      .select("doctor_id")
+      .where("id", "=", entityId)
+      .executeTakeFirst();
+  }
+
+  if (!row) throw new NotFoundException(cfg.notFound);
+  if (row.doctor_id !== doctorId) throw new ForbiddenException();
 }

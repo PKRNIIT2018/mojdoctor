@@ -726,6 +726,13 @@ export default function SettingsPage() {
                             const { createClient } = await import("@web/utils/supabase/client");
                             const supabase = createClient();
                             const {
+                              data: { user: currentUser },
+                            } = await supabase.auth.getUser();
+                            if (!currentUser) {
+                              toast.error("Not signed in");
+                              return;
+                            }
+                            const {
                               data: { session },
                             } = await supabase.auth.getSession();
                             if (!session?.access_token) {

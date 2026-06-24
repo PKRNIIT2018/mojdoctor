@@ -20,6 +20,14 @@ const mockStripeConnectService = vi.hoisted(() => ({
   createTransfer: vi.fn(),
 }));
 
+const mockStateMachineService = vi.hoisted(() => ({
+  transitionTo: vi.fn(),
+}));
+
+const mockCaseFileService = vi.hoisted(() => ({
+  createForBooking: vi.fn(),
+}));
+
 vi.mock("@repo/shared", () => ({
   getStripe: () => mockStripe,
   STRIPE_CONSULT_AMOUNT: 5000,
@@ -28,6 +36,14 @@ vi.mock("@repo/shared", () => ({
 
 vi.mock("../stripe-connect.service", () => ({
   StripeConnectService: vi.fn(() => mockStripeConnectService),
+}));
+
+vi.mock("../../booking/state-machine.service", () => ({
+  StateMachineService: vi.fn(() => mockStateMachineService),
+}));
+
+vi.mock("../../case-file/case-file.service", () => ({
+  CaseFileService: vi.fn(() => mockCaseFileService),
 }));
 
 function createMockDb() {
@@ -98,7 +114,9 @@ describe("PaymentService", () => {
     db = createMockDb();
     service = new PaymentService(
       { db: db as never, onModuleDestroy: vi.fn() } as never,
-      mockStripeConnectService as never
+      mockStripeConnectService as never,
+      mockStateMachineService as never,
+      mockCaseFileService as never
     );
   });
 

@@ -11,6 +11,8 @@ import { DatabaseService } from "../database/database.service";
 import { StateMachineService } from "./state-machine.service";
 import type { AppointmentState } from "./state-machine.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import bcrypt from "bcrypt";
+import { CaseFileService } from "../case-file/case-file.service";
 
 @Injectable()
 export class BookingService {
@@ -19,7 +21,8 @@ export class BookingService {
   constructor(
     @Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(StateMachineService) private readonly stateMachine: StateMachineService,
-    @Inject(NotificationsService) private readonly notifications: NotificationsService
+    @Inject(NotificationsService) private readonly notifications: NotificationsService,
+    @Inject(CaseFileService) private readonly caseFileService: CaseFileService
   ) {}
 
   async create(data: {
@@ -161,30 +164,7 @@ export class BookingService {
     const newState: AppointmentState =
       booking.payment_method === "other" ? "CONFIRMED" : "AWAITING_CARD";
 
-    await this.stateMachine.transitionTo(bookingId, newState, { actor });
-
-    const caseFile = await this.database.db
-      .insertInto("case_file")
-      .values({
-        booking_id: bookingId,
-        doctor_id: booking.doctor_id,
-        patient_name: booking.patient_name,
-        patient_email: booking.patient_email,
-      })
-      .returningAll()
-      .executeTakeFirst();
-
-    this.notifications
-      .sendBookingApproved(bookingId, booking.patient_email, booking.patient_name, "Doctor")
-      .catch((err: unknown) =>
-        this.logger.error(`sendBookingApproved: ${err instanceof Error ? err.message : err}`)
-      );
-
-    this.notifications
-      .sendIntakeEmail(bookingId, booking.patient_email, booking.patient_name)
-      .catch((err: unknown) =>
-        this.logger.error(`sendIntakeEmail: ${err instanceof Error ? err.message : err}`)
-      );
+    const { caseFile } = await this._confirmBooking(bookingId, booking, newState, actor);
 
     return { booking: { ...booking, status: newState }, caseFile };
   }
@@ -201,30 +181,12 @@ export class BookingService {
       throw new BadRequestException("Payment method must be 'other' or 'as_agreed'");
     }
 
-    await this.stateMachine.transitionTo(bookingId, "CONFIRMED" as AppointmentState, { actor });
-
-    const caseFile = await this.database.db
-      .insertInto("case_file")
-      .values({
-        booking_id: bookingId,
-        doctor_id: booking.doctor_id,
-        patient_name: booking.patient_name,
-        patient_email: booking.patient_email,
-      })
-      .returningAll()
-      .executeTakeFirst();
-
-    this.notifications
-      .sendBookingApproved(bookingId, booking.patient_email, booking.patient_name, "Doctor")
-      .catch((err: unknown) =>
-        this.logger.error(`sendBookingApproved: ${err instanceof Error ? err.message : err}`)
-      );
-
-    this.notifications
-      .sendIntakeEmail(bookingId, booking.patient_email, booking.patient_name)
-      .catch((err: unknown) =>
-        this.logger.error(`sendIntakeEmail: ${err instanceof Error ? err.message : err}`)
-      );
+    const { caseFile } = await this._confirmBooking(
+      bookingId,
+      booking,
+      "CONFIRMED" as AppointmentState,
+      actor
+    );
 
     return { booking: { ...booking, status: "CONFIRMED" }, caseFile };
   }
@@ -455,40 +417,15 @@ export class BookingService {
 
   async getConsultations(doctorId: string, status?: string, page = 1, limit = 20) {
     const offset = (page - 1) * limit;
-    let query = this.database.db
-      .selectFrom("booking")
-      .innerJoin("slot", "slot.id", "booking.slot_id")
-      .leftJoin("case_file", "case_file.booking_id", "booking.id")
-      .select([
-        "booking.id as booking_id",
-        "booking.patient_name",
-        "booking.patient_email",
-        "booking.patient_phone",
-        "booking.reason",
-        "booking.payment_method",
-        "booking.status",
-        "booking.language",
-        "booking.gdpr_consent",
-        "booking.created_at as booking_created_at",
-        "slot.date",
-        "slot.start_time",
-        "slot.end_time",
-        "slot.mode",
-        "case_file.id as case_file_id",
-        "booking.video_room_url",
-      ])
+    let query = this._bookingWithSlotsQuery()
+      .select("booking.video_room_url")
       .where("booking.doctor_id", "=", doctorId);
 
     if (status) {
       query = query.where("booking.status", "=", status);
     }
 
-    return query
-      .orderBy("slot.date", "desc")
-      .orderBy("slot.start_time", "desc")
-      .limit(limit)
-      .offset(offset)
-      .execute();
+    return query.limit(limit).offset(offset).execute();
   }
 
   async findByStatus(status: string, page = 1, limit = 20) {
@@ -529,31 +466,9 @@ export class BookingService {
 
   async getPatientHistory(email: string, doctorId: string, page = 1, limit = 20) {
     const offset = (page - 1) * limit;
-    return this.database.db
-      .selectFrom("booking")
-      .innerJoin("slot", "slot.id", "booking.slot_id")
-      .leftJoin("case_file", "case_file.booking_id", "booking.id")
-      .select([
-        "booking.id as booking_id",
-        "booking.patient_name",
-        "booking.patient_email",
-        "booking.patient_phone",
-        "booking.reason",
-        "booking.payment_method",
-        "booking.status",
-        "booking.language",
-        "booking.gdpr_consent",
-        "booking.created_at as booking_created_at",
-        "slot.date",
-        "slot.start_time",
-        "slot.end_time",
-        "slot.mode",
-        "case_file.id as case_file_id",
-      ])
+    return this._bookingWithSlotsQuery()
       .where("booking.patient_email", "=", email)
       .where("booking.doctor_id", "=", doctorId)
-      .orderBy("slot.date", "desc")
-      .orderBy("slot.start_time", "desc")
       .limit(limit)
       .offset(offset)
       .execute();
@@ -599,9 +514,64 @@ export class BookingService {
       .execute();
   }
 
+  private async _confirmBooking(
+    bookingId: string,
+    booking: { doctor_id: string; patient_name: string; patient_email: string },
+    newState: AppointmentState,
+    actor?: string
+  ) {
+    await this.stateMachine.transitionTo(bookingId, newState, { actor });
+
+    const caseFile = await this.caseFileService.createForBooking({
+      bookingId,
+      doctorId: booking.doctor_id,
+      patientName: booking.patient_name,
+      patientEmail: booking.patient_email,
+    });
+
+    this.notifications
+      .sendBookingApproved(bookingId, booking.patient_email, booking.patient_name, "Doctor")
+      .catch((err: unknown) =>
+        this.logger.error(`sendBookingApproved: ${err instanceof Error ? err.message : err}`)
+      );
+
+    this.notifications
+      .sendIntakeEmail(bookingId, booking.patient_email, booking.patient_name)
+      .catch((err: unknown) =>
+        this.logger.error(`sendIntakeEmail: ${err instanceof Error ? err.message : err}`)
+      );
+
+    return { caseFile };
+  }
+
+  private _bookingWithSlotsQuery() {
+    return this.database.db
+      .selectFrom("booking")
+      .innerJoin("slot", "slot.id", "booking.slot_id")
+      .leftJoin("case_file", "case_file.booking_id", "booking.id")
+      .select([
+        "booking.id as booking_id",
+        "booking.patient_name",
+        "booking.patient_email",
+        "booking.patient_phone",
+        "booking.reason",
+        "booking.payment_method",
+        "booking.status",
+        "booking.language",
+        "booking.gdpr_consent",
+        "booking.created_at as booking_created_at",
+        "slot.date",
+        "slot.start_time",
+        "slot.end_time",
+        "slot.mode",
+        "case_file.id as case_file_id",
+      ])
+      .orderBy("slot.date", "desc")
+      .orderBy("slot.start_time", "desc");
+  }
+
   private async hashPin(pin: string): Promise<string> {
-    const { hash } = await import("bcrypt");
-    return hash(pin, 10);
+    return bcrypt.hash(pin, 10);
   }
 
   async verifyDocumentPin(bookingId: string, pin: string) {
@@ -626,8 +596,7 @@ export class BookingService {
       throw new HttpException("PIN locked — too many failed attempts. Try again later.", 429);
     }
 
-    const { compare } = await import("bcrypt");
-    const valid = await compare(pin, booking.document_pin);
+    const valid = await bcrypt.compare(pin, booking.document_pin);
 
     if (!valid) {
       const attempts = (booking.pin_attempts ?? 0) + 1;

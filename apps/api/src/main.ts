@@ -20,7 +20,7 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule, {
     logger: ["log", "error", "warn"],
-    snapshot: true,
+    snapshot: process.env.NODE_ENV !== "production",
   });
 
   app.use(helmet());
