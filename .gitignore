@@ -57,7 +57,7 @@ playwright-report/
 test-results/
 
 # Supabase
-supabase/.temp/
+/supabase/.temp/
 
 # Docs (not source code)
 docs/*.md
@@ -87,4 +87,4 @@ Consultation/
 __pycache__/
 *.pyc
 .vercel
-supabase/
+/supabase/
