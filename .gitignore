@@ -59,8 +59,7 @@ test-results/
 # Supabase
 /supabase/.temp/
 
-# Docs (not source code)
-docs/*.md
+# Docs (auto-generated or personal scratch, not committed)
 docs/*.html
 google-workspace-tasks.md
 implementation_plan.md
